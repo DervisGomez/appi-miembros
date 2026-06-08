@@ -13,31 +13,31 @@ public class MemberService : IMemberService
         _context = context;
     }
 
-    public List<Member> GetMembers()
+    public async Task<List<Member>> GetMembers()
     {
-        return _context.Members.ToList();
+        return await _context.Members.ToListAsync();
     }
 
-    public void AddMember(Member member)
+    public async Task AddMember(Member member)
     {
-        _context.Members.Add(member);
-        _context.SaveChanges();
+        await _context.Members.AddAsync(member);
+        await _context.SaveChangesAsync();
     }
 
-    public Member? GetMember(int id)
+    public async Task<Member?> GetMember(int id)
     {
         if (id <= 0)
         {
             return null;
         }
 
-        return _context.Members.FirstOrDefault(m => m.Id == id);
+        return await _context.Members.Include(m => m.Donations).FirstOrDefaultAsync(m => m.Id == id);
     }
 
-    public Member? UpdateMember(Member member)
+    public async Task<Member?> UpdateMember(Member member)
     {
-        var existingMember = _context.Members
-        .FirstOrDefault(m => m.Id == member.Id);
+        var existingMember = await _context.Members
+        .FirstOrDefaultAsync(m => m.Id == member.Id);
 
         if (existingMember == null)
         {
@@ -49,14 +49,14 @@ public class MemberService : IMemberService
         existingMember.Email = member.Email;
         existingMember.Phone = member.Phone;
         existingMember.Age = member.Age;
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
         return existingMember;
     }
 
-    public Member? DeleteMember(int id)
+    public async Task<Member?> DeleteMember(int id)
     {
-        var member = _context.Members
-        .FirstOrDefault(m => m.Id == id);
+        var member = await _context.Members
+        .FirstOrDefaultAsync(m => m.Id == id);
 
         if (member == null)
         {
@@ -65,7 +65,7 @@ public class MemberService : IMemberService
 
         _context.Members.Remove(member);
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         return member;
     }

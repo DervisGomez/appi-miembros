@@ -4,13 +4,13 @@ namespace ChurchApi.Services;
 
 public interface IMemberService
 {
-    List<Member> GetMembers();
+    Task<List<Member>> GetMembers();
 
-    void AddMember(Member member);
+    Task AddMember(Member member);
 
-    Member? GetMember(int id);
+    Task<Member?> GetMember(int id);
 
-    Member? UpdateMember(Member member);
+    Task<Member?> UpdateMember(Member member);
 
-    Member? DeleteMember(int id);
+    Task<Member?> DeleteMember(int id);
 }

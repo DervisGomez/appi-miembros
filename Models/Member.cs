@@ -13,5 +13,6 @@ public class Member
     public string Phone { get; set; } = string.Empty;
 
     public int Age { get; set; }
+    public List<Donation> Donations { get; set; } = [];
 }
 

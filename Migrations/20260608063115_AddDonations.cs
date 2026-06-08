@@ -5,7 +5,7 @@
 namespace ChurchApi.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMemberContactFields : Migration
+    public partial class AddDonations : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
