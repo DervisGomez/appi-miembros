@@ -10,5 +10,5 @@ public interface IDonationService
     // Task<Donation?> GetDonation(int id);
     Task<Donation?> AddDonation(CreateDonationDto dto, int memberId);
     // Task<Donation?> UpdateDonation(Donation donation);
-    // Task<Donation?> DeleteDonation(int id);
+    Task<Donation?> DeleteDonation(int id);
 }

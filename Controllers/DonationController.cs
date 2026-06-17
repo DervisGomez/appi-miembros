@@ -24,4 +24,15 @@ public class DonationsController : ControllerBase
         
         return Ok(pagedResponse);
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteDonation(int id)
+    {
+        var deletedDonation = await _donationService.DeleteDonation(id);
+        if (deletedDonation == null)
+        {
+            return NotFound();
+        }
+        return Ok(deletedDonation);
+    }
 }   

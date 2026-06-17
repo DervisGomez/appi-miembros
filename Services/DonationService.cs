@@ -1,10 +1,11 @@
 namespace ChurchApi.Services;
 
-using ChurchApi.Models;
-using ChurchApi.Dtos;
 using ChurchApi.Data;
-using Microsoft.EntityFrameworkCore;
+using ChurchApi.Dtos;
+using ChurchApi.Enums;
 using ChurchApi.Mappers;
+using ChurchApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 public class DonationService : IDonationService
 {
@@ -30,6 +31,16 @@ public class DonationService : IDonationService
         {
             query = query.Where(d => d.Amount <= queryDto.MaxAmount);
         }
+        Console.WriteLine(queryDto.SortOrder);
+        Console.WriteLine((int)queryDto.SortOrder);
+        if (queryDto.SortOrder == SortOrder.Asc)
+        {
+            query = query.OrderBy(d => d.Date);
+        }
+        else
+        {
+            query = query.OrderByDescending(d => d.Date);
+        }
         var totalItems = await query.CountAsync();
         var page = queryDto.Page < 1
             ? 1
@@ -40,16 +51,36 @@ public class DonationService : IDonationService
             : queryDto.PageSize;
 
         pageSize = Math.Min(pageSize, 100);
-        query = query.Skip((page - 1) * pageSize).Take(pageSize);
+        // query = query.Skip((page - 1) * pageSize).Take(pageSize);
 
         
         var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-        var items = await query.ToListAsync();
+
+        var items = await query
+        // .OrderByDescending(d => d.Date)
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .Select(d => new DonationMemberResponseDto
+        {
+            Id = d.Id,
+            Amount = d.Amount,
+            Date = d.Date,
+            Description = d.Description,
+
+            Member = new MemberDonationResponseDto
+            {
+                Id = d.Member.Id,
+                Name = d.Member.Name,
+                LastName = d.Member.LastName
+            }
+        })
+        .ToListAsync();
+
+        
+        // var items = await query.ToListAsync();
         var response = new PagedResponse<DonationMemberResponseDto>
         {
-            Items = items
-                .Select(DonationMapper.ToResponseDto)
-                .ToList(),
+            Items = items,
             Page = page,
             PageSize = pageSize,
             TotalItems = totalItems,
@@ -74,5 +105,16 @@ public class DonationService : IDonationService
         await _context.Donations.AddAsync(donation);
         await _context.SaveChangesAsync();
         return donation;   
+    }
+    public async Task<Donation?> DeleteDonation(int id)
+    {
+        var donation = await _context.Donations.FirstOrDefaultAsync(d => d.Id == id);
+        if (donation == null)
+        {
+            return null;
+        }
+        _context.Donations.Remove(donation);
+        await _context.SaveChangesAsync();
+        return donation;
     }
 }
