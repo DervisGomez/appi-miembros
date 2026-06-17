@@ -4,6 +4,7 @@ using ChurchApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using ChurchApi.Models;
 using ChurchApi.Dtos;
+using ChurchApi.Mappers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -15,31 +16,12 @@ public class DonationsController : ControllerBase
         _donationService = donationService;
     }
 
-    private static DonationMemberResponseDto ToDto(Donation donation)
-    {
-        return new DonationMemberResponseDto
-        {
-            Id = donation.Id,
-            Amount = donation.Amount,
-            Date = donation.Date,
-            Description = donation.Description,
-            Member = new MemberDonationResponseDto
-            {
-                Id = donation.Member.Id,
-                Name = donation.Member.Name,
-                LastName = donation.Member.LastName,
-                Email = donation.Member.Email,
-                Phone = donation.Member.Phone,
-                Age = donation.Member.Age
-            }
-        };
-    }
 
     [HttpGet]
-    public async Task<IActionResult> GetDonations()
+    public async Task<IActionResult> GetDonations([FromQuery] DonationQueryDto queryDto)
     {
-        var donations = await _donationService.GetDonations();
-        var response = donations.Select(ToDto).ToList();
-        return Ok(response);
+        var pagedResponse = await _donationService.GetDonations(queryDto);
+        
+        return Ok(pagedResponse);
     }
 }   
