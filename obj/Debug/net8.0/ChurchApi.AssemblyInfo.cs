@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ChurchApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c72a640e47b52a44477b67dee838134bf58121e3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a6a7b7876cacc7f5b0a373367d8d8f9ad3387aa")]
 [assembly: System.Reflection.AssemblyProductAttribute("ChurchApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChurchApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

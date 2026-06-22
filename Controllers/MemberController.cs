@@ -21,11 +21,10 @@ public class MembersController : ControllerBase
     
 
     [HttpGet]
-    public async Task<IActionResult> GetMembers()
+    public async Task<IActionResult> GetMembers([FromQuery] MemberQueryDto queryDto)
     {
-        var members = await _memberService.GetMembers();
-        var response = members.Select(MemberMapper.ToDto).ToList();
-        return Ok(response);
+        var pagedResponse = await _memberService.GetMembers(queryDto);
+        return Ok(pagedResponse);
     }
 
     [HttpGet("{id}")]

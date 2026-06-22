@@ -1,4 +1,7 @@
 using ChurchApi.Data;
+using ChurchApi.Dtos;
+using ChurchApi.Enums;
+using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +16,45 @@ public class MemberService : IMemberService
         _context = context;
     }
 
-    public async Task<List<Member>> GetMembers()
+    public async Task<PagedResponse<MemberResponseDto>> GetMembers(MemberQueryDto queryDto)
     {
-        return await _context.Members.ToListAsync();
+        var query = _context.Members.AsQueryable();
+
+        if (queryDto.SortOrder == SortOrder.Asc)
+        {
+            query = query.OrderBy(m => m.Name).ThenBy(m => m.LastName);
+        }
+        else
+        {
+            query = query.OrderByDescending(m => m.Name).ThenByDescending(m => m.LastName);
+        }
+
+        var totalItems = await query.CountAsync();
+
+        var page = queryDto.Page < 1 ? 1 : queryDto.Page;
+        var pageSize = queryDto.PageSize < 1 ? 10 : queryDto.PageSize;
+        pageSize = Math.Min(pageSize, 100);
+
+        var totalPages = totalItems == 0
+            ? 0
+            : (int)Math.Ceiling((double)totalItems / pageSize);
+
+        var members = await query
+            .Include(m => m.Donations)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var items = members.Select(MemberMapper.ToDto).ToList();
+
+        return new PagedResponse<MemberResponseDto>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalItems = totalItems,
+            TotalPages = totalPages
+        };
     }
 
     public async Task AddMember(Member member)

@@ -1,10 +1,11 @@
+using ChurchApi.Dtos;
 using ChurchApi.Models;
 
 namespace ChurchApi.Services;
 
 public interface IMemberService
 {
-    Task<List<Member>> GetMembers();
+    Task<PagedResponse<MemberResponseDto>> GetMembers(MemberQueryDto queryDto);
 
     Task AddMember(Member member);
 
