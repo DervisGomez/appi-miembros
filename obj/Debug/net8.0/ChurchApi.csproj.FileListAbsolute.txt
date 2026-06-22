@@ -168,3 +168,7 @@
 /home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/runtimes/win/lib/net6.0/System.Security.Cryptography.ProtectedData.dll
 /home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/runtimes/win/lib/net6.0/System.Windows.Extensions.dll
 /home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/obj/Debug/net8.0/ChurchApi.sourcelink.json
+/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/Microsoft.AspNetCore.Cryptography.Internal.dll
+/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
+/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/Microsoft.Extensions.Identity.Core.dll
+/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/bin/Debug/net8.0/Microsoft.Bcl.Memory.dll

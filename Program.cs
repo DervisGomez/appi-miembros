@@ -1,8 +1,10 @@
 using ChurchApi.Models;
 using ChurchApi.Services;
 using ChurchApi.Data;
+using ChurchApi.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -13,12 +15,53 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<IDonationService, DonationService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Ingrese: Bearer {token}"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 builder.Services.AddControllers();
+
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration["Jwt:Secret"];
+
+if (string.IsNullOrWhiteSpace(jwtSecret))
+{
+    throw new InvalidOperationException(
+        "JWT secret is not configured. Set Jwt:Secret in appsettings or the JWT_SECRET environment variable.");
+}
+
+
+builder.Services.AddJwtAuthentication(jwtSecret);
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -32,47 +75,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
-
-// app.MapGet("/", () =>
-// {
-//     return "Church API is running!";
-// });
-
-// app.MapGet("/member/{id}", (IMemberService memberService, int id) =>
-// {
-//     var member = memberService.GetMember(id);
-//     return member is null
-//         ? Results.NotFound()
-//         : Results.Ok(member);
-
-// });
-
-// app.MapGet("/members", (IMemberService memberService) =>
-// {
-//     return memberService.GetMembers();
-// });
-
-// app.MapPost("/member", (IMemberService memberService, Member member) =>
-// {
-//     memberService.AddMember(member);
-//     return Results.Created($"/member/{member.Name}", member);
-// });
-
-// app.MapPut("/member", (IMemberService memberService, Member member) =>
-// {
-//     var result = memberService.UpdateMember(member);
-//     return result is null
-//         ? Results.NotFound()
-//         : Results.Ok(result);
-// });
-
-// app.MapDelete("/member/{id}", (IMemberService memberService, int id) =>
-// {
-//     var result = memberService.DeleteMember(id);
-//     return result is null
-//         ? Results.NotFound()
-//         : Results.Ok(result);
-// });
 
 app.Run();

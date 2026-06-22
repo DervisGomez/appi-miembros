@@ -12,4 +12,5 @@ public class AppDbContext : DbContext
 
     public DbSet<Member> Members { get; set; }
     public DbSet<Donation> Donations { get; set; }
+    public DbSet<User> Users { get; set; }  
 }
