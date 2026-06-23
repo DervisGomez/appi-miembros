@@ -4599,7 +4599,7 @@
     ]
   },
   "packageFolders": {
-    "/home/usuario/.nuget/packages/": {}
+    "/tmp/cursor-sandbox-cache/8810b23e371319d9cc439457412a9f3c/nuget": {}
   },
   "project": {
     "version": "1.0.0",
@@ -4607,7 +4607,7 @@
       "projectUniqueName": "/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/ChurchApi.csproj",
       "projectName": "ChurchApi",
       "projectPath": "/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/ChurchApi.csproj",
-      "packagesPath": "/home/usuario/.nuget/packages/",
+      "packagesPath": "/tmp/cursor-sandbox-cache/8810b23e371319d9cc439457412a9f3c/nuget",
       "outputPath": "/home/usuario/Trabajo/Dervis/aprendizaje-dotnet/ChurchApi/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [

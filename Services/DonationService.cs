@@ -3,6 +3,7 @@ namespace ChurchApi.Services;
 using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
+using ChurchApi.Exceptions;
 using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -31,8 +32,14 @@ public class DonationService : IDonationService
         {
             query = query.Where(d => d.Amount <= queryDto.MaxAmount);
         }
-        Console.WriteLine(queryDto.SortOrder);
-        Console.WriteLine((int)queryDto.SortOrder);
+
+        if (queryDto.MinAmount is not null
+            && queryDto.MaxAmount is not null
+            && queryDto.MinAmount > queryDto.MaxAmount)
+        {
+            throw new ValidationException("MinAmount cannot be greater than MaxAmount.");
+        }
+
         if (queryDto.SortOrder == SortOrder.Asc)
         {
             query = query.OrderBy(d => d.Date);
@@ -109,9 +116,9 @@ public class DonationService : IDonationService
     public async Task<Donation?> DeleteDonation(int id)
     {
         var donation = await _context.Donations.FirstOrDefaultAsync(d => d.Id == id);
-        if (donation == null)
+        if (donation is null)
         {
-            return null;
+            throw new NotFoundException($"Donation with id {id} was not found.");
         }
         _context.Donations.Remove(donation);
         await _context.SaveChangesAsync();

@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using ChurchApi.Exceptions;
 
 namespace ChurchApi.Services;
 
@@ -27,7 +28,7 @@ public class AuthService : IAuthService
         var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == registerDto.Username || u.Email == registerDto.Email);
         if (existingUser is not null)
         {
-            throw new Exception("User already exists");
+            throw new ConflictException("User already exists");
         }
 
         var user = new User
@@ -53,13 +54,9 @@ public class AuthService : IAuthService
     public async Task<AuthResponseDto> Login(LoginDto loginDto)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username || u.Email == loginDto.Username);
-        if (user is null)
+        if (user is null || !AuthPasswordHasher.Verify(loginDto.Password, user.PasswordHash))
         {
-            throw new Exception("Invalid username or password");
-        }
-        if (!AuthPasswordHasher.Verify(loginDto.Password, user.PasswordHash))
-        {
-            throw new Exception("Invalid username or password");
+            throw new UnauthorizedException("Invalid username or password");
         }
         return new AuthResponseDto
         {
@@ -91,24 +88,23 @@ public class AuthService : IAuthService
     }
 
     public async Task<UserResponseDto?> PromoteToAdmin(int userId)
-{
-    var user = await _context.Users.FindAsync(userId);
-
-    if (user == null)
     {
-        return null;
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {userId} was not found.");
+        }
+
+        user.Role = UserRole.Admin;
+        await _context.SaveChangesAsync();
+
+        return new UserResponseDto
+        {
+            Id = user.Id,
+            Username = user.Username,
+            Email = user.Email,
+            Role = user.Role,
+        };
     }
-
-    user.Role = UserRole.Admin;
-
-    await _context.SaveChangesAsync();
-
-    return new UserResponseDto
-    {
-        Id = user.Id,
-        Username = user.Username,
-        Email = user.Email,
-        Role = user.Role
-    };
-}
 }

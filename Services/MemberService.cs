@@ -1,6 +1,7 @@
 using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
+using ChurchApi.Exceptions;
 using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -67,10 +68,19 @@ public class MemberService : IMemberService
     {
         if (id <= 0)
         {
-            return null;
+            throw new NotFoundException($"Member with id {id} was not found.");
         }
 
-        return await _context.Members.Include(m => m.Donations).FirstOrDefaultAsync(m => m.Id == id);
+        var member = await _context.Members
+            .Include(m => m.Donations)
+            .FirstOrDefaultAsync(m => m.Id == id);
+
+        if (member is null)
+        {
+            throw new NotFoundException($"Member with id {id} was not found.");
+        }
+
+        return member;
     }
 
     public async Task<Member?> UpdateMember(Member member)
@@ -78,9 +88,9 @@ public class MemberService : IMemberService
         var existingMember = await _context.Members
         .FirstOrDefaultAsync(m => m.Id == member.Id);
 
-        if (existingMember == null)
+        if (existingMember is null)
         {
-            return null;
+            throw new NotFoundException($"Member with id {member.Id} was not found.");
         }
 
         existingMember.Name = member.Name;
@@ -97,9 +107,9 @@ public class MemberService : IMemberService
         var member = await _context.Members
         .FirstOrDefaultAsync(m => m.Id == id);
 
-        if (member == null)
+        if (member is null)
         {
-            return null;
+            throw new NotFoundException($"Member with id {id} was not found.");
         }
 
         _context.Members.Remove(member);

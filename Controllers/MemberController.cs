@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 namespace ChurchApi.Controllers;
 
 using ChurchApi.Services;
@@ -17,9 +18,8 @@ public class MembersController : ControllerBase
         _memberService = memberService;
         _donationService = donationService;
     } 
-
     
-
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetMembers([FromQuery] MemberQueryDto queryDto)
     {
@@ -27,6 +27,7 @@ public class MembersController : ControllerBase
         return Ok(pagedResponse);
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMember(int id)
     {
@@ -39,6 +40,7 @@ public class MembersController : ControllerBase
         return Ok(MemberMapper.ToDto(member));
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> AddMember(CreateMemberDto dto)
     {
@@ -47,6 +49,8 @@ public class MembersController : ControllerBase
         return CreatedAtAction(nameof(GetMember), new { id = member.Id }, MemberMapper.ToDto(member));
     }
 
+
+    [Authorize(Roles = "Admin")]
     [HttpPut]
     public async Task<IActionResult> UpdateMember(UpdateMemberDto dto)
     {
@@ -59,6 +63,8 @@ public class MembersController : ControllerBase
         return Ok(MemberMapper.ToDto(updatedMember));
     }
 
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMember(int id)
     {
@@ -72,6 +78,7 @@ public class MembersController : ControllerBase
         return Ok(MemberMapper.ToDto(deletedMember));
     }
 
+    [Authorize]
     [HttpGet("{memberId}/donations")]
     public async Task<IActionResult> GetDonationsByMemberId(int memberId)
     {
@@ -80,6 +87,7 @@ public class MembersController : ControllerBase
         return Ok(response);
     }
 
+    [Authorize]
     [HttpPost("{memberId}/donations")]
     public async Task<IActionResult> AddDonation(CreateDonationDto dto, int memberId)
     {

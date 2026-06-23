@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 namespace ChurchApi.Controllers;
 
 using ChurchApi.Services;
@@ -16,7 +17,7 @@ public class DonationsController : ControllerBase
         _donationService = donationService;
     }
 
-
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetDonations([FromQuery] DonationQueryDto queryDto)
     {
@@ -25,6 +26,7 @@ public class DonationsController : ControllerBase
         return Ok(pagedResponse);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteDonation(int id)
     {
