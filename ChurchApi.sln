@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchApi", "ChurchApi.csproj", "{C7102769-53E6-4F95-95AA-69B8A7C328C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchApi", "src\ChurchApi\ChurchApi.csproj", "{B5FD1C17-B8E8-4784-A502-06674363CF65}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchApi.Tests", "tests\ChurchApi.Tests\ChurchApi.Tests.csproj", "{CEF22B73-DA27-4EE2-B447-D056A7C504B9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,9 +16,13 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C7102769-53E6-4F95-95AA-69B8A7C328C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C7102769-53E6-4F95-95AA-69B8A7C328C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C7102769-53E6-4F95-95AA-69B8A7C328C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C7102769-53E6-4F95-95AA-69B8A7C328C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5FD1C17-B8E8-4784-A502-06674363CF65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5FD1C17-B8E8-4784-A502-06674363CF65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5FD1C17-B8E8-4784-A502-06674363CF65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5FD1C17-B8E8-4784-A502-06674363CF65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEF22B73-DA27-4EE2-B447-D056A7C504B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEF22B73-DA27-4EE2-B447-D056A7C504B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEF22B73-DA27-4EE2-B447-D056A7C504B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEF22B73-DA27-4EE2-B447-D056A7C504B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

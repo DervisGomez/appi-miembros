@@ -1,342 +1,248 @@
-# ChurchApi
+# Church API
 
-API REST para la gestión de miembros y donaciones de una iglesia. Desarrollada con **ASP.NET Core 8**, **Entity Framework Core** y autenticación **JWT**.
+A REST API built with ASP.NET Core 8 for managing church members and their donations. The project demonstrates common backend patterns including JWT authentication, role-based authorization, Entity Framework Core data access, and unit testing with mocked dependencies.
 
----
+This is a learning and portfolio project. It is not intended for production use.
 
-## Tabla de contenidos
+## Features
 
-- [Características](#características)
-- [Stack tecnológico](#stack-tecnológico)
-- [Arquitectura](#arquitectura)
-- [Requisitos previos](#requisitos-previos)
-- [Configuración](#configuración)
-- [Puesta en marcha](#puesta-en-marcha)
-- [Autenticación](#autenticación)
-- [Endpoints](#endpoints)
-- [Paginación y filtros](#paginación-y-filtros)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Migraciones de base de datos](#migraciones-de-base-de-datos)
+- ASP.NET Core 8 Web API
+- Entity Framework Core with SQL Server
+- JWT authentication via a custom `AuthenticationHandler`
+- Role-based authorization (`Admin`, `User`)
+- Password hashing with ASP.NET Core Identity `PasswordHasher`
+- User registration and login
+- Member management (CRUD)
+- Donation management with member association
+- Pagination on list endpoints (members and donations)
+- Filtering donations by `MemberId`, `MinAmount`, and `MaxAmount`
+- Sorting members by name and donations by date
+- DTO pattern for request and response models
+- Manual mapping via static mapper classes
+- Global exception handling middleware with consistent JSON error responses
+- Dependency injection with scoped services
+- Separation of JWT token generation (`IJwtTokenService`) from authentication logic (`IAuthService`)
+- Unit testing with xUnit, Moq, and FluentAssertions
+- Swagger / OpenAPI (Development environment only)
 
----
+## Architecture
 
-## Características
+The solution follows a conventional `src` / `tests` layout:
 
-- CRUD completo de **miembros** con datos de contacto.
-- Gestión de **donaciones** asociadas a cada miembro.
-- Listados **paginados** de miembros y donaciones con ordenamiento configurable.
-- Filtros de donaciones por monto, miembro y rango de importes.
-- **Registro e inicio de sesión** con tokens JWT.
-- Roles de usuario (`User`, `Admin`) con endpoint protegido para promoción de administradores.
-- Documentación interactiva con **Swagger UI** en entorno de desarrollo.
-
----
-
-## Stack tecnológico
-
-| Componente        | Tecnología                                      |
-|-------------------|-------------------------------------------------|
-| Framework         | ASP.NET Core 8                                  |
-| ORM               | Entity Framework Core 8                         |
-| Base de datos     | Microsoft SQL Server                            |
-| Autenticación     | JWT (handler personalizado)                     |
-| Hash de contraseñas | ASP.NET Core Identity `PasswordHasher`        |
-| Documentación     | Swashbuckle (Swagger / OpenAPI)                 |
-
----
-
-## Arquitectura
-
-La aplicación sigue una arquitectura en capas:
-
+```text
+.
+├── ChurchApi.sln
+├── src/
+│   └── ChurchApi/
+│       ├── Authentication/    Custom JWT authentication handler and options
+│       ├── Controllers/       HTTP endpoints (Auth, Members, Donations)
+│       ├── Data/              EF Core DbContext
+│       ├── Dtos/              Request, response, and query models
+│       ├── Enums/             Shared enumerations (UserRole, SortOrder)
+│       ├── Exceptions/        Domain-specific exceptions
+│       ├── Extensions/        Service registration extensions
+│       ├── Helpers/           Utility classes (password hashing)
+│       ├── Interfaces/        Service contracts
+│       ├── Mappers/           Manual entity-to-DTO mapping
+│       ├── Middleware/        Global exception handling
+│       ├── Migrations/        EF Core database migrations
+│       ├── Models/            Domain entities
+│       ├── Services/          Business logic
+│       └── Program.cs         Application entry point and DI configuration
+└── tests/
+    └── ChurchApi.Tests/
+        ├── Helpers/           Test infrastructure (in-memory DbContext factory)
+        └── Services/          Unit tests for service layer
 ```
-Controllers  →  Services  →  Data (DbContext)  →  SQL Server
-     ↓
-   DTOs / Mappers
-```
 
-| Capa          | Responsabilidad                                      |
-|---------------|------------------------------------------------------|
-| `Controllers` | Recibir peticiones HTTP y devolver respuestas        |
-| `Services`    | Lógica de negocio e interacción con la base de datos |
-| `Dtos`        | Contratos de entrada y salida de la API              |
-| `Mappers`     | Transformación entre modelos de dominio y DTOs       |
-| `Models`      | Entidades de dominio                                 |
-| `Data`        | Contexto de Entity Framework Core                    |
-| `Authentication` | Validación de tokens JWT en cada petición         |
+**Controllers** handle HTTP concerns and delegate to services. **Services** contain business logic and interact with `AppDbContext`. **Dtos** decouple the API contract from domain models. **Mappers** translate between entities and DTOs. **Middleware** catches unhandled exceptions and returns structured error responses.
 
----
+## Technologies
 
-## Requisitos previos
+| Technology | Purpose |
+|---|---|
+| ASP.NET Core 8 | Web API framework |
+| Entity Framework Core 8 | ORM and migrations |
+| SQL Server | Primary database |
+| JWT (`System.IdentityModel.Tokens.Jwt`) | Token generation and validation |
+| Swashbuckle (Swagger) | API documentation |
+| ASP.NET Core Identity (`PasswordHasher`) | Password hashing |
+| xUnit | Test framework |
+| Moq | Dependency mocking |
+| FluentAssertions | Readable test assertions |
+| EF Core InMemory | In-memory database for unit tests |
+
+## Getting Started
+
+### Prerequisites
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- SQL Server accesible localmente (o contenedor Docker)
-- Variable de entorno o configuración de JWT (ver [Configuración](#configuración))
+- SQL Server instance accessible from your machine
 
----
-
-## Configuración
-
-### Base de datos
-
-Edita la cadena de conexión en `appsettings.json`:
-
-```json
-{
-  "ConnectionStrings": {
-    "SqlServer": "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=TU_PASSWORD;TrustServerCertificate=True;"
-  }
-}
-```
-
-> También existe soporte para SQLite comentado en `Program.cs` (`UseSqlite`).
-
-### JWT
-
-El secreto JWT se resuelve en este orden de prioridad:
-
-1. Variable de entorno `JWT_SECRET` (recomendado en producción)
-2. Clave `Jwt:Secret` en `appsettings.Development.json` (desarrollo local)
-
-```json
-{
-  "Jwt": {
-    "Secret": "ChurchApi-Dev-Secret-Key-Min32Chars!"
-  }
-}
-```
-
-En producción:
+### Setup
 
 ```bash
-export JWT_SECRET="tu-clave-secreta-de-al-menos-32-caracteres"
-```
-
-Los tokens expiran **1 hora** después de su emisión.
-
----
-
-## Puesta en marcha
-
-```bash
-# Clonar e ingresar al proyecto
-cd ChurchApi
-
-# Restaurar dependencias
+git clone https://github.com/DervisGomez/appi-miembreos.git
+cd appi-miembreos
 dotnet restore
-
-# Aplicar migraciones a la base de datos
-dotnet ef database update
-
-# Ejecutar la aplicación
-dotnet run
+dotnet build
 ```
 
-La API queda disponible en:
+> **Note:** The cloned directory name matches the repository name on GitHub. If you fork or rename the repository, adjust the `cd` command accordingly.
 
-| Entorno   | URL                                      |
-|-----------|------------------------------------------|
-| HTTP      | `http://localhost:5101`                  |
-| HTTPS     | `https://localhost:7231`                 |
-| Swagger   | `http://localhost:5101/swagger`          |
+### Configuration
 
----
-
-## Autenticación
-
-### Flujo
-
-1. **Registrar** un usuario → `POST /api/auth/register`
-2. **Iniciar sesión** → `POST /api/auth/login` → recibir `{ "token": "..." }`
-3. Incluir el token en peticiones protegidas:
-
-```
-Authorization: Bearer {token}
-```
-
-### Roles
-
-| Rol     | Descripción                                              |
-|---------|----------------------------------------------------------|
-| `User`  | Rol asignado por defecto al registrarse                  |
-| `Admin` | Acceso a endpoints con `[Authorize(Roles = "Admin")]`   |
-
-### Endpoints protegidos
-
-| Método  | Ruta                          | Rol requerido |
-|---------|-------------------------------|---------------|
-| `PATCH` | `/api/auth/{userId}/promote`  | `Admin`       |
-
-> El resto de endpoints son públicos en la versión actual.
-
----
-
-## Endpoints
-
-### Auth — `/api/auth`
-
-| Método  | Ruta                    | Descripción                          | Auth  |
-|---------|-------------------------|--------------------------------------|-------|
-| `POST`  | `/register`             | Registrar nuevo usuario              | No    |
-| `POST`  | `/login`                | Iniciar sesión y obtener JWT         | No    |
-| `PATCH` | `/{userId}/promote`     | Promover usuario a administrador     | Admin |
-
-**Registro — cuerpo de ejemplo:**
+Update the SQL Server connection string in `src/ChurchApi/appsettings.json`:
 
 ```json
-{
-  "username": "jdoe",
-  "email": "jdoe@example.com",
-  "password": "password123"
+"ConnectionStrings": {
+  "SqlServer": "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;"
 }
 ```
 
-**Login — cuerpo de ejemplo:**
+Configure the JWT secret using one of the following options:
 
-```json
-{
-  "username": "jdoe",
-  "password": "password123"
-}
-```
+- Set the `JWT_SECRET` environment variable, or
+- Add `Jwt:Secret` to `appsettings.Development.json` (a development value is already provided)
 
-**Respuesta de login:**
+### Database
 
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
----
-
-### Members — `/api/members`
-
-| Método   | Ruta                      | Descripción                              |
-|----------|---------------------------|------------------------------------------|
-| `GET`    | `/`                       | Listar miembros (paginado)               |
-| `GET`    | `/{id}`                   | Obtener miembro por ID (con donaciones)  |
-| `POST`   | `/`                       | Crear miembro                            |
-| `PUT`    | `/`                       | Actualizar miembro                       |
-| `DELETE` | `/{id}`                   | Eliminar miembro                         |
-| `GET`    | `/{memberId}/donations`   | Donaciones de un miembro                 |
-| `POST`   | `/{memberId}/donations`   | Registrar donación para un miembro       |
-
-**Crear miembro — cuerpo de ejemplo:**
-
-```json
-{
-  "name": "Juan",
-  "lastName": "Pérez",
-  "email": "juan@example.com",
-  "phone": "3001234567",
-  "age": 35
-}
-```
-
----
-
-### Donations — `/api/donations`
-
-| Método   | Ruta       | Descripción                              |
-|----------|------------|------------------------------------------|
-| `GET`    | `/`        | Listar donaciones (paginado y filtrable) |
-| `DELETE` | `/{id}`    | Eliminar donación                        |
-
-**Crear donación** (vía miembro):
-
-```
-POST /api/members/{memberId}/donations
-```
-
-```json
-{
-  "amount": 150.00,
-  "description": "Ofrenda dominical"
-}
-```
-
----
-
-## Paginación y filtros
-
-### Miembros — `GET /api/members`
-
-| Parámetro    | Tipo       | Default | Descripción                          |
-|--------------|------------|---------|--------------------------------------|
-| `page`       | `int`      | `1`     | Número de página                     |
-| `pageSize`   | `int`      | `10`    | Elementos por página (máx. 100)      |
-| `sortOrder`  | `Asc/Desc` | `Asc`   | Orden por nombre y apellido          |
-
-**Respuesta paginada:**
-
-```json
-{
-  "items": [ ... ],
-  "page": 1,
-  "pageSize": 10,
-  "totalItems": 25,
-  "totalPages": 3
-}
-```
-
-### Donaciones — `GET /api/donations`
-
-| Parámetro    | Tipo       | Default | Descripción                          |
-|--------------|------------|---------|--------------------------------------|
-| `page`       | `int`      | `1`     | Número de página                     |
-| `pageSize`   | `int`      | `10`    | Elementos por página (máx. 100)      |
-| `sortOrder`  | `Asc/Desc` | `Desc`  | Orden por fecha                      |
-| `memberId`   | `int?`     | —       | Filtrar por miembro                  |
-| `minAmount`  | `decimal?` | —       | Monto mínimo                         |
-| `maxAmount`  | `decimal?` | —       | Monto máximo                         |
-
----
-
-## Estructura del proyecto
-
-```
-ChurchApi/
-├── Authentication/       # Handler y opciones JWT
-├── Controllers/          # AuthController, MembersController, DonationsController
-├── Data/                 # AppDbContext
-├── Dtos/                 # Objetos de transferencia de datos
-├── Enums/                # UserRole, SortOrder
-├── Extensions/           # Configuración de servicios (JWT)
-├── Helpers/              # AuthPasswordHasher
-├── Mappers/              # MemberMapper, DonationMapper
-├── Migrations/           # Migraciones EF Core
-├── Models/               # Member, Donation, User
-├── Services/             # Lógica de negocio
-├── Program.cs            # Punto de entrada y DI
-└── appsettings.json      # Configuración
-```
-
----
-
-## Migraciones de base de datos
+Apply EF Core migrations before running the application:
 
 ```bash
-# Aplicar migraciones pendientes
-dotnet ef database update
-
-# Crear una nueva migración (tras cambiar modelos)
-dotnet ef migrations add NombreDeLaMigracion
-
-# Revertir a una migración anterior
-dotnet ef database update NombreMigracionAnterior
+dotnet ef database update --project src/ChurchApi
 ```
 
-### Entidades principales
+### Run
 
-| Entidad    | Campos clave                                              |
-|------------|-----------------------------------------------------------|
-| `Member`   | Name, LastName, Email, Phone, Age                         |
-| `Donation` | Amount, Date, Description, MemberId                       |
-| `User`     | Username, Email, PasswordHash, Role                       |
+```bash
+dotnet run --project src/ChurchApi
+```
 
----
+By default, the application starts on `http://localhost:5101` and `https://localhost:7231` (see `launchSettings.json`).
 
-## Licencia
+## Running Tests
 
-Proyecto de aprendizaje — uso libre con fines educativos.
+Execute all unit tests from the solution root:
+
+```bash
+dotnet test
+```
+
+Current test coverage focuses on `AuthService` (registration, login, and error scenarios) using an in-memory database and mocked `IJwtTokenService`.
+
+## API Documentation
+
+Swagger UI is enabled automatically when running in the **Development** environment.
+
+| Profile | Swagger URL |
+|---|---|
+| HTTP | http://localhost:5101/swagger |
+| HTTPS | https://localhost:7231/swagger |
+
+The Swagger configuration includes a Bearer token security scheme for testing authenticated endpoints.
+
+## API Endpoints
+
+All routes are relative to the application base URL (e.g. `http://localhost:5101`).
+
+### Auth
+
+| Method | Endpoint | Authorization | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | None | Register a new user |
+| `POST` | `/api/auth/login` | None | Authenticate and receive a JWT |
+| `PATCH` | `/api/auth/{userId}/promote` | `Admin` | Promote a user to the `Admin` role |
+
+### Members
+
+| Method | Endpoint | Authorization | Description |
+|---|---|---|---|
+| `GET` | `/api/members` | Authenticated | List members (paginated, sortable) |
+| `GET` | `/api/members/{id}` | Authenticated | Get a member by ID |
+| `POST` | `/api/members` | Authenticated | Create a member |
+| `PUT` | `/api/members` | `Admin` | Update a member |
+| `DELETE` | `/api/members/{id}` | `Admin` | Delete a member |
+| `GET` | `/api/members/{memberId}/donations` | Authenticated | List donations for a member |
+| `POST` | `/api/members/{memberId}/donations` | Authenticated | Add a donation to a member |
+
+**Query parameters for `GET /api/members`:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `Page` | `int` | `1` | Page number |
+| `PageSize` | `int` | `10` | Items per page (max `100`) |
+| `SortOrder` | `Asc` \| `Desc` | `Asc` | Sort by name and last name |
+
+### Donations
+
+| Method | Endpoint | Authorization | Description |
+|---|---|---|---|
+| `GET` | `/api/donations` | Authenticated | List donations (paginated, filterable, sortable) |
+| `DELETE` | `/api/donations/{id}` | `Admin` | Delete a donation |
+
+**Query parameters for `GET /api/donations`:**
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `MemberId` | `int?` | — | Filter by member ID |
+| `MinAmount` | `decimal?` | — | Minimum donation amount |
+| `MaxAmount` | `decimal?` | — | Maximum donation amount |
+| `Page` | `int` | `1` | Page number |
+| `PageSize` | `int` | `10` | Items per page (max `100`) |
+| `SortOrder` | `Asc` \| `Desc` | `Desc` | Sort by donation date |
+
+## Authentication
+
+### Register
+
+`POST /api/auth/register`
+
+Creates a new user with the `User` role. Passwords are hashed before persistence. Returns the created user without a token.
+
+### Login
+
+`POST /api/auth/login`
+
+Validates credentials by username or email. On success, returns a JWT signed with HMAC-SHA256. Tokens expire after one hour and include `NameIdentifier` (user ID) and `Role` claims.
+
+### Authorization
+
+Protected endpoints require a valid Bearer token in the `Authorization` header. Some operations are restricted to the `Admin` role:
+
+| Role | Access |
+|---|---|
+| `User` | Read members and donations, create members and donations |
+| `Admin` | All `User` permissions, plus update/delete members, delete donations, and promote users to admin |
+
+### Promote to Admin
+
+`PATCH /api/auth/{userId}/promote` (Admin only)
+
+Promotes an existing user to the `Admin` role.
+
+## Testing
+
+The test project (`tests/ChurchApi.Tests`) uses:
+
+- **xUnit** as the test runner and assertion framework
+- **Moq** to mock `IJwtTokenService`, keeping `AuthService` tests independent of JWT configuration
+- **FluentAssertions** for expressive assertions
+- **EF Core InMemory** via `TestDbContextFactory` to isolate database access in unit tests
+
+Tests target the service layer directly, without spinning up the web host.
+
+## Future Improvements
+
+The following items are planned but **not yet implemented**:
+
+- Refresh tokens
+- Integration tests
+- Docker support
+- GitHub Actions CI/CD
+- Clean Architecture layering
+- Structured logging with Serilog
+
+## License
+
+MIT
