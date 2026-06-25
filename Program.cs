@@ -1,3 +1,4 @@
+using ChurchApi.Interfaces;
 using ChurchApi.Models;
 using ChurchApi.Services;
 using ChurchApi.Data;
@@ -16,6 +17,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<IDonationService, DonationService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 

@@ -2,12 +2,9 @@ using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
 using ChurchApi.Helpers;
+using ChurchApi.Interfaces;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using ChurchApi.Exceptions;
 
 namespace ChurchApi.Services;
@@ -15,12 +12,12 @@ namespace ChurchApi.Services;
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
-    private readonly IConfiguration _configuration;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public AuthService(AppDbContext context, IConfiguration configuration)
+    public AuthService(AppDbContext context, IJwtTokenService jwtTokenService)
     {
         _context = context;
-        _configuration = configuration;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<UserResponseDto> Register(RegisterDto registerDto)
@@ -60,31 +57,8 @@ public class AuthService : IAuthService
         }
         return new AuthResponseDto
         {
-            Token = GenerateToken(user.Id, user.Role),
+            Token = _jwtTokenService.GenerateToken(user.Id, user.Role),
         };
-    }
-
-    private string GenerateToken(int userId, UserRole role)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
-            ?? _configuration["Jwt:Secret"];
-
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            throw new InvalidOperationException(
-                "JWT secret is not configured. Set Jwt:Secret in appsettings or the JWT_SECRET environment variable.");
-        }
-
-        var key = Encoding.UTF8.GetBytes(secret);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, role.ToString()) }),
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-        };
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
     }
 
     public async Task<UserResponseDto?> PromoteToAdmin(int userId)
