@@ -17,8 +17,8 @@ public class MemberServiceTests
         var context = TestDbContextFactory.Create();
         var service = new MemberService(context);
 
-        await SeedMemberAsync(context, name: "Alice", lastName: "Brown");
-        await SeedMemberAsync(context, name: "Bob", lastName: "Smith");
+        await TestDataSeeder.CreateMemberAsync(context, name: "Alice", lastName: "Brown");
+        await TestDataSeeder.CreateMemberAsync(context, name: "Bob", lastName: "Smith");
 
         var queryDto = new MemberQueryDto
         {
@@ -48,8 +48,8 @@ public class MemberServiceTests
         var context = TestDbContextFactory.Create();
         var service = new MemberService(context);
 
-        await SeedMemberAsync(context, name: "Alice", lastName: "Brown");
-        await SeedMemberAsync(context, name: "Bob", lastName: "Smith");
+        await TestDataSeeder.CreateMemberAsync(context, name: "Alice", lastName: "Brown");
+        await TestDataSeeder.CreateMemberAsync(context, name: "Bob", lastName: "Smith");
 
         var queryDto = new MemberQueryDto
         {
@@ -102,7 +102,7 @@ public class MemberServiceTests
         var context = TestDbContextFactory.Create();
         var service = new MemberService(context);
 
-        var existingMember = await SeedMemberAsync(context, name: "John", lastName: "Doe");
+        var existingMember = await TestDataSeeder.CreateMemberAsync(context, name: "John", lastName: "Doe");
 
         var updatedMember = new Member
         {
@@ -163,7 +163,7 @@ public class MemberServiceTests
         var context = TestDbContextFactory.Create();
         var service = new MemberService(context);
 
-        var member = await SeedMemberAsync(context);
+        var member = await TestDataSeeder.CreateMemberAsync(context);
 
         // Act
         var result = await service.DeleteMember(member.Id);
@@ -192,23 +192,4 @@ public class MemberServiceTests
             .WithMessage("Member with id 999 was not found.");
     }
 
-    private static async Task<Member> SeedMemberAsync(
-        ChurchApi.Data.AppDbContext context,
-        string name = "Dervis",
-        string lastName = "Gomez")
-    {
-        var member = new Member
-        {
-            Name = name,
-            LastName = lastName,
-            Email = $"{name.ToLower()}@test.com",
-            Phone = "123456789",
-            Age = 30
-        };
-
-        context.Members.Add(member);
-        await context.SaveChangesAsync();
-
-        return member;
-    }
 }

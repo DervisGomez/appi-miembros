@@ -1,8 +1,7 @@
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
 using ChurchApi.Exceptions;
-using ChurchApi.Models;
-using ChurchApi.Services;
+using ChurchApi.Tests.Fixtures;
 using ChurchApi.Tests.Helpers;
 using FluentAssertions;
 
@@ -10,16 +9,22 @@ namespace ChurchApi.Tests.Services;
 
 public class DonationServiceTests
 {
+    private const decimal LowAmount = 50m;
+    private const decimal MidAmount = 100m;
+    private const decimal HighAmount = 200m;
+
+    private static readonly DateTime JanuaryFirst = new(2024, 1, 1);
+    private static readonly DateTime FebruaryFirst = new(2024, 2, 1);
+    private static readonly DateTime MarchFirst = new(2024, 3, 1);
+
     [Fact]
     public async Task GetDonations_Should_Return_Paged_Donations()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
-
-        var member = await SeedMemberAsync(context);
-        await SeedDonationAsync(context, member, amount: 100m, date: new DateTime(2024, 1, 1));
-        await SeedDonationAsync(context, member, amount: 200m, date: new DateTime(2024, 2, 1));
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, FebruaryFirst);
 
         var queryDto = new DonationQueryDto
         {
@@ -29,16 +34,15 @@ public class DonationServiceTests
         };
 
         // Act
-        var result = await service.GetDonations(queryDto);
+        var result = await fixture.Service.GetDonations(queryDto);
 
         // Assert
-        result.Should().NotBeNull();
         result.Items.Should().HaveCount(2);
         result.TotalItems.Should().Be(2);
         result.Page.Should().Be(1);
         result.PageSize.Should().Be(10);
         result.TotalPages.Should().Be(1);
-        result.Items[0].Amount.Should().Be(200m);
+        result.Items[0].Amount.Should().Be(HighAmount);
         result.Items[0].Member.Name.Should().Be(member.Name);
     }
 
@@ -46,35 +50,194 @@ public class DonationServiceTests
     public async Task GetDonations_Should_Filter_By_MemberId()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
+        using var fixture = new DonationServiceFixture();
+        var memberOne = await TestDataSeeder.CreateMemberAsync(fixture.Context, name: "John", lastName: "Doe");
+        var memberTwo = await TestDataSeeder.CreateMemberAsync(fixture.Context, name: "Jane", lastName: "Smith");
 
-        var memberOne = await SeedMemberAsync(context, name: "John", lastName: "Doe");
-        var memberTwo = await SeedMemberAsync(context, name: "Jane", lastName: "Smith");
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, memberOne, LowAmount);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, memberTwo, MidAmount + LowAmount);
 
-        await SeedDonationAsync(context, memberOne, amount: 50m);
-        await SeedDonationAsync(context, memberTwo, amount: 150m);
+        var queryDto = new DonationQueryDto { MemberId = memberOne.Id };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().ContainSingle();
+        result.Items[0].Amount.Should().Be(LowAmount);
+        result.Items[0].Member.Id.Should().Be(memberOne.Id);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Filter_By_MinAmount()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, FebruaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, MarchFirst);
+
+        var queryDto = new DonationQueryDto { MinAmount = MidAmount };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().HaveCount(2);
+        result.Items.Select(d => d.Amount).Should().ContainInOrder(HighAmount, MidAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Filter_By_MaxAmount()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, FebruaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, MarchFirst);
+
+        var queryDto = new DonationQueryDto { MaxAmount = MidAmount };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().HaveCount(2);
+        result.Items.Select(d => d.Amount).Should().ContainInOrder(MidAmount, LowAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Filter_By_MinAmount_And_MaxAmount()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount);
 
         var queryDto = new DonationQueryDto
         {
-            MemberId = memberOne.Id
+            MinAmount = LowAmount + 25m,
+            MaxAmount = MidAmount + 50m
         };
 
         // Act
-        var result = await service.GetDonations(queryDto);
+        var result = await fixture.Service.GetDonations(queryDto);
 
         // Assert
-        result.Items.Should().HaveCount(1);
-        result.Items[0].Amount.Should().Be(50m);
-        result.Items[0].Member.Id.Should().Be(memberOne.Id);
+        result.Items.Should().ContainSingle();
+        result.Items[0].Amount.Should().Be(MidAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Return_Donations_In_Ascending_Order_When_SortOrder_Is_Asc()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount, MarchFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, FebruaryFirst);
+
+        var queryDto = new DonationQueryDto { SortOrder = SortOrder.Asc };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items.Select(d => d.Date).Should().BeInAscendingOrder();
+        result.Items[0].Amount.Should().Be(MidAmount);
+        result.Items[2].Amount.Should().Be(LowAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Return_Donations_In_Descending_Order_When_SortOrder_Is_Desc()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, MarchFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, FebruaryFirst);
+
+        var queryDto = new DonationQueryDto { SortOrder = SortOrder.Desc };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items.Select(d => d.Date).Should().BeInDescendingOrder();
+        result.Items[0].Amount.Should().Be(MidAmount);
+        result.Items[2].Amount.Should().Be(LowAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Return_Second_Page_When_Page_Is_Two()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, LowAmount, JanuaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount, FebruaryFirst);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, HighAmount, MarchFirst);
+
+        var queryDto = new DonationQueryDto
+        {
+            Page = 2,
+            PageSize = 2,
+            SortOrder = SortOrder.Asc
+        };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().ContainSingle();
+        result.TotalItems.Should().Be(3);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(2);
+        result.TotalPages.Should().Be(2);
+        result.Items[0].Amount.Should().Be(HighAmount);
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Return_Empty_Page_When_No_Donations_Match_Filter()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount);
+
+        var queryDto = new DonationQueryDto
+        {
+            MinAmount = HighAmount + 100m
+        };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().BeEmpty();
+        result.TotalItems.Should().Be(0);
+        result.TotalPages.Should().Be(0);
     }
 
     [Fact]
     public async Task GetDonations_Should_Throw_ValidationException_When_MinAmount_Is_Greater_Than_MaxAmount()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
+        using var fixture = new DonationServiceFixture();
 
         var queryDto = new DonationQueryDto
         {
@@ -83,7 +246,7 @@ public class DonationServiceTests
         };
 
         // Act
-        Func<Task> act = () => service.GetDonations(queryDto);
+        Func<Task> act = () => fixture.Service.GetDonations(queryDto);
 
         // Assert
         await act
@@ -93,13 +256,93 @@ public class DonationServiceTests
     }
 
     [Fact]
+    public async Task GetDonations_Should_Use_Default_Pagination_When_Page_And_PageSize_Are_Invalid()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, member, MidAmount);
+
+        var queryDto = new DonationQueryDto
+        {
+            Page = 0,
+            PageSize = 0
+        };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
+        result.Items.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task GetDonations_Should_Return_Only_OneHundred_Items_When_PageSize_Exceeds_Maximum()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        for (var i = 0; i < 150; i++)
+        {
+            await TestDataSeeder.CreateDonationAsync(fixture.Context, member, amount: i + 1);
+        }
+
+        var queryDto = new DonationQueryDto { PageSize = 500 };
+
+        // Act
+        var result = await fixture.Service.GetDonations(queryDto);
+
+        // Assert
+        result.Items.Should().HaveCount(100);
+        result.PageSize.Should().Be(100);
+        result.TotalItems.Should().Be(150);
+        result.TotalPages.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetDonationsByMemberId_Should_Return_Donations_For_Member()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var memberOne = await TestDataSeeder.CreateMemberAsync(fixture.Context, name: "John", lastName: "Doe");
+        var memberTwo = await TestDataSeeder.CreateMemberAsync(fixture.Context, name: "Jane", lastName: "Smith");
+
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, memberOne, LowAmount);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, memberOne, MidAmount);
+        await TestDataSeeder.CreateDonationAsync(fixture.Context, memberTwo, HighAmount);
+
+        // Act
+        var result = await fixture.Service.GetDonationsByMemberId(memberOne.Id);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result.Select(d => d.Amount).Should().BeEquivalentTo([LowAmount, MidAmount]);
+        result.Should().OnlyContain(d => d.MemberId == memberOne.Id);
+    }
+
+    [Fact]
+    public async Task GetDonationsByMemberId_Should_Return_Empty_List_When_Member_Has_No_Donations()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+
+        // Act
+        var result = await fixture.Service.GetDonationsByMemberId(member.Id);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task AddDonation_Should_Create_Donation_When_Member_Exists()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
-
-        var member = await SeedMemberAsync(context);
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
 
         var dto = new CreateDonationDto
         {
@@ -108,25 +351,24 @@ public class DonationServiceTests
         };
 
         // Act
-        var result = await service.AddDonation(dto, member.Id);
+        var result = await fixture.Service.AddDonation(dto, member.Id);
 
         // Assert
         result.Should().NotBeNull();
         result!.Amount.Should().Be(250m);
         result.Description.Should().Be("Monthly offering");
         result.MemberId.Should().Be(member.Id);
+        result.Date.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
 
-        var donationInDb = context.Donations.Single();
-        donationInDb.Amount.Should().Be(250m);
-        donationInDb.Description.Should().Be("Monthly offering");
+        var donationInDb = fixture.Context.Donations.Single();
+        donationInDb.Should().BeEquivalentTo(result, options => options.ExcludingMissingMembers());
     }
 
     [Fact]
     public async Task AddDonation_Should_Return_Null_When_Member_Does_Not_Exist()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
+        using var fixture = new DonationServiceFixture();
 
         var dto = new CreateDonationDto
         {
@@ -135,88 +377,44 @@ public class DonationServiceTests
         };
 
         // Act
-        var result = await service.AddDonation(dto, memberId: 999);
+        var result = await fixture.Service.AddDonation(dto, memberId: 999);
 
         // Assert
         result.Should().BeNull();
-        context.Donations.Should().BeEmpty();
+        fixture.Context.Donations.Should().BeEmpty();
     }
 
     [Fact]
     public async Task DeleteDonation_Should_Delete_Donation()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
-
-        var member = await SeedMemberAsync(context);
-        var donation = await SeedDonationAsync(context, member, amount: 75m);
+        using var fixture = new DonationServiceFixture();
+        var member = await TestDataSeeder.CreateMemberAsync(fixture.Context);
+        var donation = await TestDataSeeder.CreateDonationAsync(fixture.Context, member, 75m);
 
         // Act
-        var result = await service.DeleteDonation(donation.Id);
+        var result = await fixture.Service.DeleteDonation(donation.Id);
 
         // Assert
         result.Should().NotBeNull();
         result!.Id.Should().Be(donation.Id);
         result.Amount.Should().Be(75m);
-        context.Donations.Should().BeEmpty();
+        fixture.Context.Donations.Should().BeEmpty();
     }
 
     [Fact]
     public async Task DeleteDonation_Should_Throw_NotFoundException_When_Donation_Does_Not_Exist()
     {
         // Arrange
-        var context = TestDbContextFactory.Create();
-        var service = new DonationService(context);
+        using var fixture = new DonationServiceFixture();
 
         // Act
-        Func<Task> act = () => service.DeleteDonation(999);
+        Func<Task> act = () => fixture.Service.DeleteDonation(999);
 
         // Assert
         await act
             .Should()
             .ThrowAsync<NotFoundException>()
             .WithMessage("Donation with id 999 was not found.");
-    }
-
-    private static async Task<Member> SeedMemberAsync(
-        ChurchApi.Data.AppDbContext context,
-        string name = "Dervis",
-        string lastName = "Gomez")
-    {
-        var member = new Member
-        {
-            Name = name,
-            LastName = lastName,
-            Email = $"{name.ToLower()}@test.com",
-            Phone = "123456789",
-            Age = 30
-        };
-
-        context.Members.Add(member);
-        await context.SaveChangesAsync();
-
-        return member;
-    }
-
-    private static async Task<Donation> SeedDonationAsync(
-        ChurchApi.Data.AppDbContext context,
-        Member member,
-        decimal amount,
-        DateTime? date = null)
-    {
-        var donation = new Donation
-        {
-            Amount = amount,
-            Description = "Test donation",
-            MemberId = member.Id,
-            Date = date ?? DateTime.UtcNow,
-            Member = member
-        };
-
-        context.Donations.Add(donation);
-        await context.SaveChangesAsync();
-
-        return donation;
     }
 }
