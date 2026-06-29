@@ -1,14 +1,16 @@
 using ChurchApi.Data;
 using ChurchApi.Tests.Integration.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 
 namespace ChurchApi.Tests.Integration.Infrastructure;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private const string JwtSecret = "IntegrationTestsSecretKeyThatIsLongEnough123456";
-    private readonly string _databaseName = Guid.NewGuid().ToString();
+    private readonly DbConnection _connection = CreateConnection();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -32,9 +34,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             RemoveDbContextRegistrations(services);
 
-            services.AddDbContext<AppDbContext>(options =>
+            services.AddSingleton(_connection);
+            services.AddDbContext<AppDbContext>((serviceProvider, options) =>
             {
-                options.UseInMemoryDatabase(_databaseName);
+                options.UseSqlite(serviceProvider.GetRequiredService<DbConnection>());
             });
         });
     }
@@ -51,17 +54,36 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         return host;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (disposing)
+        {
+            _connection.Dispose();
+        }
+    }
+
     private static void RemoveDbContextRegistrations(IServiceCollection services)
     {
         var descriptors = services
             .Where(d =>
                 d.ServiceType == typeof(AppDbContext) ||
-                d.ServiceType == typeof(DbContextOptions<AppDbContext>))
+                d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
+                d.ServiceType == typeof(DbConnection))
             .ToList();
 
         foreach (var descriptor in descriptors)
         {
             services.Remove(descriptor);
         }
+    }
+
+    private static DbConnection CreateConnection()
+    {
+        var connection = new SqliteConnection("Data Source=:memory:;Foreign Keys=True");
+        connection.Open();
+
+        return connection;
     }
 }

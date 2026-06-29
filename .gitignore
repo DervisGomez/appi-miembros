@@ -40,6 +40,12 @@ TestResults/
 .env.*
 !.env.example
 
+# SQLite local databases
+*.db
+*.db-shm
+*.db-wal
+church.db
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -1,63 +1,31 @@
 # Church API
 
-[![.NET CI](https://github.com/DervisGomez/appi-miembreos/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DervisGomez/appi-miembreos/actions/workflows/dotnet.yml)
+[![.NET CI](https://github.com/DervisGomez/appi-miembros/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DervisGomez/appi-miembros/actions/workflows/dotnet.yml)
 
-A REST API built with ASP.NET Core 8 for managing church members and their donations. The project demonstrates common backend patterns including JWT authentication, role-based authorization, Entity Framework Core data access, and unit testing with mocked dependencies.
+REST API built with ASP.NET Core 8 for managing church members and their donations. Designed as a portfolio project that demonstrates production-oriented backend practices: JWT authentication, role-based authorization, structured logging, global error handling, containerization, and automated testing.
 
-This is a learning and portfolio project. It is not intended for production use.
+> This is a portfolio and learning project. It is not intended for production use without additional hardening.
 
 ## Features
 
 - ASP.NET Core 8 Web API
-- Entity Framework Core with SQL Server
-- JWT authentication via ASP.NET Core `AddJwtBearer`
-- Role-based authorization (`Admin`, `User`)
+- Entity Framework Core 8 with SQL Server
+- JWT authentication and role-based authorization (`Admin`, `User`)
 - Password hashing with ASP.NET Core Identity `PasswordHasher`
-- User registration and login
+- User registration, login, and admin promotion
 - Member management (CRUD)
 - Donation management with member association
-- Pagination on list endpoints (members and donations)
-- Filtering donations by `MemberId`, `MinAmount`, and `MaxAmount`
-- Sorting members by name and donations by date
-- DTO pattern for request and response models
-- Manual mapping via static mapper classes
-- Global exception handling middleware with consistent JSON error responses
+- Pagination, filtering, and sorting on list endpoints
+- DTO pattern with manual mapper classes
+- Input validation with Data Annotations
+- Global exception handling middleware returning RFC 7807 `ProblemDetails`
 - Dependency injection with scoped services
-- Separation of JWT token generation (`IJwtTokenService`) from authentication logic (`IAuthService`)
-- Unit testing with xUnit, Moq, and FluentAssertions
+- Structured logging with Serilog (console sink and request logging)
+- Health checks with database connectivity probe
 - Swagger / OpenAPI (Development environment only)
-
-## Architecture
-
-The solution follows a conventional `src` / `tests` layout:
-
-```text
-.
-├── ChurchApi.sln
-├── src/
-│   └── ChurchApi/
-│       ├── Authentication/    Custom JWT authentication handler and options
-│       ├── Controllers/       HTTP endpoints (Auth, Members, Donations)
-│       ├── Data/              EF Core DbContext
-│       ├── Dtos/              Request, response, and query models
-│       ├── Enums/             Shared enumerations (UserRole, SortOrder)
-│       ├── Exceptions/        Domain-specific exceptions
-│       ├── Extensions/        Service registration extensions
-│       ├── Helpers/           Utility classes (password hashing)
-│       ├── Interfaces/        Service contracts
-│       ├── Mappers/           Manual entity-to-DTO mapping
-│       ├── Middleware/        Global exception handling
-│       ├── Migrations/        EF Core database migrations
-│       ├── Models/            Domain entities
-│       ├── Services/          Business logic
-│       └── Program.cs         Application entry point and DI configuration
-└── tests/
-    └── ChurchApi.Tests/
-        ├── Helpers/           Test infrastructure (in-memory DbContext factory)
-        └── Services/          Unit tests for service layer
-```
-
-**Controllers** handle HTTP concerns and delegate to services. **Services** contain business logic and interact with `AppDbContext`. **Dtos** decouple the API contract from domain models. **Mappers** translate between entities and DTOs. **Middleware** catches unhandled exceptions and returns structured error responses.
+- Docker and Docker Compose support
+- GitHub Actions CI pipeline
+- Unit tests and integration tests (46 tests)
 
 ## Technologies
 
@@ -66,36 +34,86 @@ The solution follows a conventional `src` / `tests` layout:
 | ASP.NET Core 8 | Web API framework |
 | Entity Framework Core 8 | ORM and migrations |
 | SQL Server | Primary database |
+| SQLite | In-memory database for integration tests |
 | JWT (`System.IdentityModel.Tokens.Jwt`) | Token generation and validation |
 | Swashbuckle (Swagger) | API documentation |
 | ASP.NET Core Identity (`PasswordHasher`) | Password hashing |
+| Serilog | Structured logging |
 | xUnit | Test framework |
 | Moq | Dependency mocking |
 | FluentAssertions | Readable test assertions |
 | EF Core InMemory | In-memory database for unit tests |
+| Docker / Docker Compose | Containerized local deployment |
+| GitHub Actions | Continuous integration |
 
-## Getting Started
+## Architecture
 
-### Prerequisites
+The solution follows a conventional `src` / `tests` layout with a layered structure inside a single API project:
+
+```text
+.
+├── ChurchApi.sln
+├── Dockerfile
+├── docker-compose.yml
+├── .editorconfig
+├── .github/
+│   └── workflows/
+│       └── dotnet.yml
+├── src/
+│   └── ChurchApi/
+│       ├── Controllers/       HTTP endpoints (Auth, Members, Donations)
+│       ├── Data/              EF Core DbContext
+│       ├── Dtos/              Request, response, and query models
+│       ├── Enums/             Shared enumerations (UserRole, SortOrder)
+│       ├── Exceptions/        Domain-specific exceptions
+│       ├── Extensions/        Service registration and pipeline configuration
+│       ├── HealthChecks/      Database health check implementation
+│       ├── Helpers/           Utility classes (password hashing)
+│       ├── Interfaces/        Service contracts (IJwtTokenService)
+│       ├── Mappers/           Manual entity-to-DTO mapping
+│       ├── Middleware/        Global exception handling
+│       ├── Migrations/        EF Core database migrations
+│       ├── Models/            Domain entities
+│       ├── Options/           Strongly typed configuration (JwtOptions)
+│       ├── Services/          Business logic and service interfaces
+│       └── Program.cs         Application entry point
+└── tests/
+    └── ChurchApi.Tests/
+        ├── Fixtures/          Test fixtures (DonationServiceFixture)
+        ├── Helpers/           In-memory DbContext factory
+        ├── Integration/       HTTP integration tests
+        │   ├── Auth/
+        │   ├── Donations/
+        │   ├── Health/
+        │   ├── Members/
+        │   ├── Helpers/
+        │   └── Infrastructure/
+        └── Unit/              Service layer unit tests
+            ├── Helpers/
+            └── Services/
+```
+
+**Controllers** handle HTTP concerns and delegate to services. **Services** contain business logic and interact with `AppDbContext`. **Dtos** decouple the API contract from domain models. **Mappers** translate between entities and DTOs. **Middleware** catches unhandled exceptions and returns structured error responses.
+
+## Requirements
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- SQL Server instance accessible from your machine
+- SQL Server instance (local development) **or** Docker with Docker Compose
 
-### Setup
+## Local Setup
+
+### Clone and build
 
 ```bash
-git clone https://github.com/DervisGomez/appi-miembreos.git
-cd appi-miembreos
+git clone git@github.com:DervisGomez/appi-miembros.git
+cd appi-miembros
 dotnet restore
 dotnet build
 ```
 
-> **Note:** The cloned directory name matches the repository name on GitHub. If you fork or rename the repository, adjust the `cd` command accordingly.
-
 ### Configuration
 
-Do not commit real connection strings or JWT secrets. Store local development secrets with
-the .NET user-secrets store:
+Do not commit real connection strings or JWT secrets. Store local development secrets with the .NET user-secrets store:
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:SqlServer" "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;" --project src/ChurchApi
@@ -108,16 +126,6 @@ dotnet user-secrets set "Jwt:Secret" "ReplaceWithALongLocalDevelopmentSecretAtLe
 "ConnectionStrings": {
   "SqlServer": ""
 }
-```
-
-For deployed environments, configure secrets through environment variables or your hosting
-provider's secret manager. ASP.NET Core maps double underscores to configuration sections:
-
-```bash
-Jwt__Secret="ReplaceWithAProductionSecretAtLeast32Chars"
-Jwt__Issuer="ChurchApi"
-Jwt__Audience="ChurchApi.Clients"
-Jwt__ExpirationMinutes="60"
 ```
 
 ### Database
@@ -134,11 +142,17 @@ dotnet ef database update --project src/ChurchApi
 dotnet run --project src/ChurchApi
 ```
 
-By default, the application starts on `http://localhost:5101` and `https://localhost:7231` (see `launchSettings.json`).
+Default URLs (see `launchSettings.json`):
+
+| Profile | URL |
+|---|---|
+| HTTP | http://localhost:5101 |
+| HTTPS | https://localhost:7231 |
+| Swagger | http://localhost:5101/swagger |
 
 ## Docker
 
-You can run the API and SQL Server together without installing SQL Server locally:
+Run the API and SQL Server together without installing SQL Server locally:
 
 ```bash
 docker compose up --build
@@ -152,60 +166,106 @@ http://localhost:8080/swagger
 
 Docker Compose starts:
 
-- `sqlserver`: SQL Server 2022 with persistent storage.
-- `churchapi`: ASP.NET Core API published in Release mode.
+- **sqlserver**: SQL Server 2022 with persistent storage and health check.
+- **churchapi**: ASP.NET Core API published in Release mode with health check.
 
-SQL Server is available only inside the Docker network; the API connects to it using
-the `sqlserver` service name.
+The API container applies EF Core migrations automatically via `Database__ApplyMigrations=true`.
 
-The API container uses environment variables instead of user-secrets:
-
-- `ConnectionStrings__SqlServer`
-- `Jwt__Secret`
-- `Jwt__Issuer`
-- `Jwt__Audience`
-- `Jwt__ExpirationMinutes`
-
-Useful Docker commands:
+Useful commands:
 
 ```bash
 docker compose ps
 docker compose logs
 docker compose logs churchapi
-docker compose logs sqlserver
 docker compose down
+docker compose down -v   # also removes the SQL Server data volume
 ```
 
-To remove the SQL Server data volume as well:
+## Environment Variables
+
+ASP.NET Core maps double underscores to nested configuration sections.
+
+| Variable | Description | Required |
+|---|---|---|
+| `ConnectionStrings__SqlServer` | SQL Server connection string | Yes |
+| `Jwt__Secret` | JWT signing key (minimum 32 characters) | Yes |
+| `Jwt__Issuer` | JWT issuer claim | Yes |
+| `Jwt__Audience` | JWT audience claim | Yes |
+| `Jwt__ExpirationMinutes` | Token lifetime in minutes | Yes |
+| `Database__ApplyMigrations` | Apply EF migrations on startup (`true` / `false`) | No |
+| `ASPNETCORE_ENVIRONMENT` | Runtime environment (`Development`, `Production`, etc.) | No |
+| `ASPNETCORE_URLS` | URLs the server listens on | No |
+
+Example for deployed environments:
 
 ```bash
-docker compose down -v
+ConnectionStrings__SqlServer="Server=...;Database=ChurchDB;..."
+Jwt__Secret="ReplaceWithAProductionSecretAtLeast32Chars"
+Jwt__Issuer="ChurchApi"
+Jwt__Audience="ChurchApi.Clients"
+Jwt__ExpirationMinutes="60"
 ```
 
-## Running Tests
+## GitHub Actions
 
-Execute all unit tests from the solution root:
+The CI pipeline (`.github/workflows/dotnet.yml`) runs on every push and pull request to `main`:
+
+1. Checkout repository
+2. Setup .NET 8 SDK
+3. Cache NuGet packages
+4. `dotnet restore`
+5. `dotnet build --configuration Release`
+6. `dotnet test --configuration Release`
+
+## Logging
+
+Logging is configured with **Serilog** via `appsettings.json` and `LoggingExtensions`:
+
+- Console sink with structured output template
+- Request logging middleware with elapsed time per request
+- Health check endpoints logged at `Debug` level to reduce noise
+- Errors logged at `Error` level through both request logging and `ExceptionMiddleware`
+
+Log enrichment includes application name and environment.
+
+## Health Checks
+
+A database connectivity health check is exposed at:
+
+```text
+GET /health
+```
+
+Returns JSON with overall status, duration, and per-check details. Returns `200` when healthy and `503` when degraded or unhealthy.
+
+## Testing
+
+Run all tests from the solution root:
 
 ```bash
 dotnet test
 ```
 
-Current test coverage focuses on `AuthService` (registration, login, and error scenarios) using an in-memory database and mocked `IJwtTokenService`.
+### Test suite (46 tests)
 
-## API Documentation
-
-Swagger UI is enabled automatically when running in the **Development** environment.
-
-| Profile | Swagger URL |
+| Area | Scope |
 |---|---|
-| HTTP | http://localhost:5101/swagger |
-| HTTPS | https://localhost:7231/swagger |
+| `AuthServiceTests` | Registration, login, conflict and unauthorized scenarios |
+| `MemberServiceTests` | Pagination, sorting, CRUD, constraint violations |
+| `DonationServiceTests` | Pagination, filtering, sorting, CRUD, validation |
+| `AuthControllerTests` | Register, login, ProblemDetails responses |
+| `MemberControllerTests` | CRUD endpoints, authorization, conflict handling |
+| `DonationControllerTests` | List, create, delete endpoints |
+| `HealthCheckTests` | `/health` endpoint availability |
 
-The Swagger configuration includes a Bearer token security scheme for testing authenticated endpoints.
+### Test infrastructure
+
+- **Unit tests**: EF Core InMemory provider via `TestDbContextFactory`, Moq for `IJwtTokenService`, `TimeProvider` for deterministic dates.
+- **Integration tests**: `WebApplicationFactory` with SQLite in-memory database, seeded admin user, full HTTP pipeline.
 
 ## API Endpoints
 
-All routes are relative to the application base URL (e.g. `http://localhost:5101`).
+All routes are relative to the application base URL.
 
 ### Auth
 
@@ -222,7 +282,7 @@ All routes are relative to the application base URL (e.g. `http://localhost:5101
 | `GET` | `/api/members` | Authenticated | List members (paginated, sortable) |
 | `GET` | `/api/members/{id}` | Authenticated | Get a member by ID |
 | `POST` | `/api/members` | Authenticated | Create a member |
-| `PUT` | `/api/members` | `Admin` | Update a member |
+| `PUT` | `/api/members/{id}` | `Admin` | Update a member |
 | `DELETE` | `/api/members/{id}` | `Admin` | Delete a member |
 | `GET` | `/api/members/{memberId}/donations` | Authenticated | List donations for a member |
 | `POST` | `/api/members/{memberId}/donations` | Authenticated | Add a donation to a member |
@@ -253,56 +313,23 @@ All routes are relative to the application base URL (e.g. `http://localhost:5101
 | `PageSize` | `int` | `10` | Items per page (max `100`) |
 | `SortOrder` | `Asc` \| `Desc` | `Desc` | Sort by donation date |
 
-## Authentication
-
-### Register
-
-`POST /api/auth/register`
-
-Creates a new user with the `User` role. Passwords are hashed before persistence. Returns the created user without a token.
-
-### Login
-
-`POST /api/auth/login`
-
-Validates credentials by username or email. On success, returns a JWT signed with HMAC-SHA256. Tokens expire after one hour and include `NameIdentifier` (user ID) and `Role` claims.
-
-### Authorization
-
-Protected endpoints require a valid Bearer token in the `Authorization` header. Some operations are restricted to the `Admin` role:
+### Authorization roles
 
 | Role | Access |
 |---|---|
 | `User` | Read members and donations, create members and donations |
-| `Admin` | All `User` permissions, plus update/delete members, delete donations, and promote users to admin |
+| `Admin` | All `User` permissions, plus update/delete members, delete donations, and promote users |
 
-### Promote to Admin
+## Roadmap
 
-`PATCH /api/auth/{userId}/promote` (Admin only)
-
-Promotes an existing user to the `Admin` role.
-
-## Testing
-
-The test project (`tests/ChurchApi.Tests`) uses:
-
-- **xUnit** as the test runner and assertion framework
-- **Moq** to mock `IJwtTokenService`, keeping `AuthService` tests independent of JWT configuration
-- **FluentAssertions** for expressive assertions
-- **EF Core InMemory** via `TestDbContextFactory` to isolate database access in unit tests
-
-Tests target the service layer directly, without spinning up the web host.
-
-## Future Improvements
-
-The following items are planned but **not yet implemented**:
+Planned improvements for future versions (not yet implemented):
 
 - Refresh tokens
-- Integration tests
-- Docker support
-- GitHub Actions CI/CD
+- Rate limiting on authentication endpoints
+- API versioning
+- OpenTelemetry / distributed tracing
 - Clean Architecture layering
-- Structured logging with Serilog
+- Test coverage reporting in CI
 
 ## License
 

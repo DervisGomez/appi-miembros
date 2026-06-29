@@ -1,5 +1,6 @@
-namespace ChurchApi.Dtos;
 using System.ComponentModel.DataAnnotations;
+
+namespace ChurchApi.Dtos;
 
 public class UpdateMemberDto
 {

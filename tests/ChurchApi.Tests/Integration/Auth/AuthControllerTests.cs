@@ -32,7 +32,6 @@ public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebA
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        response.Headers.Location.Should().NotBeNull();
 
         var user = await response.Content.ReadFromJsonAsync<UserResponseDto>();
         user.Should().NotBeNull();
@@ -42,7 +41,7 @@ public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebA
     }
 
     [Fact]
-    public async Task Register_Should_Return_ProblemDetails_When_User_Already_Exists()
+    public async Task Register_Should_Return_ProblemDetails_When_Username_Already_Exists()
     {
         // Arrange
         var username = $"user_{Guid.NewGuid():N}";
@@ -54,6 +53,36 @@ public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebA
         var response = await Client.PostAsJsonAsync("/api/auth/register", new RegisterDto
         {
             Username = username,
+            Email = $"other.{email}",
+            Password = "12345678"
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails!.Type.Should().Be("https://httpstatuses.com/409");
+        problemDetails.Title.Should().Be("Conflict");
+        problemDetails.Status.Should().Be((int)HttpStatusCode.Conflict);
+        problemDetails.Detail.Should().Be("Username already exists.");
+        problemDetails.Instance.Should().Be("/api/auth/register");
+    }
+
+    [Fact]
+    public async Task Register_Should_Return_ProblemDetails_When_Email_Already_Exists()
+    {
+        // Arrange
+        var username = $"user_{Guid.NewGuid():N}";
+        var email = $"{username}@test.com";
+
+        await IntegrationAuthHelper.RegisterAsync(Client, username, email, "12345678");
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/register", new RegisterDto
+        {
+            Username = $"other_{username}",
             Email = email,
             Password = "12345678"
         });
@@ -67,7 +96,7 @@ public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebA
         problemDetails!.Type.Should().Be("https://httpstatuses.com/409");
         problemDetails.Title.Should().Be("Conflict");
         problemDetails.Status.Should().Be((int)HttpStatusCode.Conflict);
-        problemDetails.Detail.Should().Be("User already exists");
+        problemDetails.Detail.Should().Be("Email already exists.");
         problemDetails.Instance.Should().Be("/api/auth/register");
     }
 

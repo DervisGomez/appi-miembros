@@ -6,6 +6,7 @@ using ChurchApi.Services;
 using ChurchApi.Tests.Helpers;
 using ChurchApi.Tests.Unit.Helpers;
 using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ChurchApi.Tests.Unit.Services;
 
@@ -16,7 +17,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         await TestDataSeeder.CreateMemberAsync(context, name: "Alice", lastName: "Brown");
         await TestDataSeeder.CreateMemberAsync(context, name: "Bob", lastName: "Smith");
@@ -47,7 +48,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         await TestDataSeeder.CreateMemberAsync(context, name: "Alice", lastName: "Brown");
         await TestDataSeeder.CreateMemberAsync(context, name: "Bob", lastName: "Smith");
@@ -71,7 +72,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         var member = new Member
         {
@@ -101,7 +102,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         var existingMember = await TestDataSeeder.CreateMemberAsync(context, name: "John", lastName: "Doe");
 
@@ -135,7 +136,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         var member = new Member
         {
@@ -162,7 +163,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         var member = await TestDataSeeder.CreateMemberAsync(context);
 
@@ -181,7 +182,7 @@ public class MemberServiceTests
     {
         // Arrange
         var context = TestDbContextFactory.Create();
-        var service = new MemberService(context);
+        var service = new MemberService(context, NullLogger<MemberService>.Instance);
 
         // Act
         Func<Task> act = () => service.DeleteMember(999);

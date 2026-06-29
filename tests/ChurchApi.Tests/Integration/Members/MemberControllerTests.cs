@@ -4,6 +4,7 @@ using ChurchApi.Dtos;
 using ChurchApi.Tests.Integration.Helpers;
 using ChurchApi.Tests.Integration.Infrastructure;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ChurchApi.Tests.Integration.Members;
 
@@ -72,6 +73,47 @@ public class MemberControllerTests : IntegrationTestBase, IClassFixture<CustomWe
         persistedMember.Should().NotBeNull();
         persistedMember!.Id.Should().Be(createdMember.Id);
         persistedMember.Email.Should().Be(request.Email);
+    }
+
+    [Fact]
+    public async Task CreateMember_Should_Return_Conflict_When_Email_Already_Exists()
+    {
+        // Arrange
+        IntegrationAuthHelper.ClearAuthorization(Client);
+        var token = await IntegrationAuthHelper.LoginAsAdminAsync(Client);
+        IntegrationAuthHelper.SetBearerToken(Client, token);
+
+        var email = $"duplicate.member.{Guid.NewGuid():N}@test.com";
+
+        var firstResponse = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Ana",
+            LastName = "Torres",
+            Email = email,
+            Phone = "5551230000",
+            Age = 29
+        });
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Andrea",
+            LastName = "Torres",
+            Email = email,
+            Phone = "5551230001",
+            Age = 32
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails!.Detail.Should().Be("Email already exists.");
+        problemDetails.Status.Should().Be((int)HttpStatusCode.Conflict);
+        problemDetails.Instance.Should().Be("/api/members");
     }
 
     [Fact]
@@ -147,5 +189,47 @@ public class MemberControllerTests : IntegrationTestBase, IClassFixture<CustomWe
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         var content = await response.Content.ReadAsByteArrayAsync();
         content.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteMember_Should_Return_Conflict_When_Member_Has_Donations()
+    {
+        // Arrange
+        IntegrationAuthHelper.ClearAuthorization(Client);
+        var token = await IntegrationAuthHelper.LoginAsAdminAsync(Client);
+        IntegrationAuthHelper.SetBearerToken(Client, token);
+
+        var createResponse = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Pedro",
+            LastName = "Mora",
+            Email = $"pedro.mora.{Guid.NewGuid():N}@test.com",
+            Phone = "5559991111",
+            Age = 41
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createdMember = await createResponse.Content.ReadFromJsonAsync<MemberResponseDto>();
+        createdMember.Should().NotBeNull();
+
+        var donationResponse = await Client.PostAsJsonAsync($"/api/members/{createdMember!.Id}/donations", new CreateDonationDto
+        {
+            Amount = 50m,
+            Description = "Sunday offering"
+        });
+        donationResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Act
+        var response = await Client.DeleteAsync($"/api/members/{createdMember.Id}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails!.Detail.Should().Be("Cannot delete member because it has associated donations.");
+        problemDetails.Status.Should().Be((int)HttpStatusCode.Conflict);
+        problemDetails.Instance.Should().Be($"/api/members/{createdMember.Id}");
     }
 }

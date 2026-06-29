@@ -21,5 +21,10 @@ RUN dotnet publish "src/ChurchApi/ChurchApi.csproj" \
 
 FROM base AS final
 WORKDIR /app
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+USER $APP_UID
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "ChurchApi.dll"]

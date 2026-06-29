@@ -1,5 +1,3 @@
-namespace ChurchApi.Services;
-
 using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
@@ -7,6 +5,8 @@ using ChurchApi.Exceptions;
 using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
+
+namespace ChurchApi.Services;
 
 public class DonationService : IDonationService
 {
@@ -54,22 +54,58 @@ public class DonationService : IDonationService
         await EnsureMemberExists(memberId);
 
         var donation = CreateDonation(dto, memberId);
-        await _context.Donations.AddAsync(donation);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.Donations.AddAsync(donation);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (PersistenceExceptionTranslator.IsForeignKeyConstraintViolation(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "Foreign key constraint violation while creating a donation for member {MemberId}.",
+                memberId);
+
+            throw new ConflictException("Cannot create donation because the member does not exist.");
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while creating a donation for member {MemberId}.",
+                memberId);
+
+            throw;
+        }
 
         _logger.LogInformation(
             "Donation created with id {DonationId} for member {MemberId}",
             donation.Id,
             memberId);
 
-        return donation;   
+        return donation;
     }
+
     public async Task<Donation> DeleteDonation(int id)
     {
         var donation = await GetDonationOrThrow(id);
 
         _context.Donations.Remove(donation);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while deleting donation {DonationId}.",
+                id);
+
+            throw;
+        }
 
         _logger.LogInformation("Donation deleted with id {DonationId}", donation.Id);
 

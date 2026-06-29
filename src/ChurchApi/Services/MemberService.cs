@@ -15,10 +15,14 @@ public class MemberService : IMemberService
     private const int MaxPageSize = 100;
 
     private readonly AppDbContext _context;
+    private readonly ILogger<MemberService> _logger;
 
-    public MemberService(AppDbContext context)
+    public MemberService(
+        AppDbContext context,
+        ILogger<MemberService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<PagedResponse<MemberResponseDto>> GetMembers(MemberQueryDto queryDto)
@@ -38,8 +42,27 @@ public class MemberService : IMemberService
 
     public async Task AddMember(Member member)
     {
-        await _context.Members.AddAsync(member);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.Members.AddAsync(member);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (PersistenceExceptionTranslator.IsUniqueConstraintViolation(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "Unique constraint violation while creating a member.");
+
+            throw new ConflictException("Email already exists.");
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while creating a member.");
+
+            throw;
+        }
     }
 
     public async Task<Member> GetMember(int id)
@@ -61,7 +84,30 @@ public class MemberService : IMemberService
         existingMember.Email = member.Email;
         existingMember.Phone = member.Phone;
         existingMember.Age = member.Age;
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (PersistenceExceptionTranslator.IsUniqueConstraintViolation(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "Unique constraint violation while updating member {MemberId}.",
+                member.Id);
+
+            throw new ConflictException("Email already exists.");
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while updating member {MemberId}.",
+                member.Id);
+
+            throw;
+        }
+
         return existingMember;
     }
 
@@ -71,7 +117,28 @@ public class MemberService : IMemberService
 
         _context.Members.Remove(member);
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (PersistenceExceptionTranslator.IsForeignKeyConstraintViolation(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "Foreign key constraint violation while deleting member {MemberId}.",
+                id);
+
+            throw new ConflictException("Cannot delete member because it has associated donations.");
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while deleting member {MemberId}.",
+                id);
+
+            throw;
+        }
 
         return member;
     }

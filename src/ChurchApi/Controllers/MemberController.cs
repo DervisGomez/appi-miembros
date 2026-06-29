@@ -1,12 +1,11 @@
-using Microsoft.AspNetCore.Authorization;
-namespace ChurchApi.Controllers;
-
-using ChurchApi.Services;
-using Microsoft.AspNetCore.Mvc;
-using ChurchApi.Models;
 using ChurchApi.Dtos;
 using ChurchApi.Exceptions;
 using ChurchApi.Mappers;
+using ChurchApi.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ChurchApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -14,12 +13,13 @@ public class MembersController : ControllerBase
 {
     private readonly IMemberService _memberService;
     private readonly IDonationService _donationService;
+
     public MembersController(IMemberService memberService, IDonationService donationService)
     {
         _memberService = memberService;
         _donationService = donationService;
-    } 
-    
+    }
+
     [Authorize]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<MemberResponseDto>), StatusCodes.Status200OK)]
@@ -48,7 +48,6 @@ public class MembersController : ControllerBase
         return CreatedAtAction(nameof(GetMember), new { id = member.Id }, MemberMapper.ToDto(member));
     }
 
-
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(MemberResponseDto), StatusCodes.Status200OK)]
@@ -62,7 +61,6 @@ public class MembersController : ControllerBase
         var updatedMember = await _memberService.UpdateMember(MemberMapper.ToModel(dto));
         return Ok(MemberMapper.ToDto(updatedMember));
     }
-
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]

@@ -84,7 +84,49 @@ public class AuthServiceTests
         await act
             .Should()
             .ThrowAsync<ConflictException>()
-            .WithMessage("User already exists");
+            .WithMessage("Email already exists.");
+    }
+
+    [Fact]
+    public async Task Register_Should_Throw_ConflictException_When_Username_Already_Exists()
+    {
+        // Arrange
+        var context = TestDbContextFactory.Create();
+
+        var jwtTokenServiceMock = new Mock<IJwtTokenService>();
+
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
+
+        var existingUser = new User
+        {
+            Username = "dervis",
+            Email = "other@test.com",
+            PasswordHash = AuthPasswordHasher.Hash("123456"),
+            Role = UserRole.User
+        };
+
+        context.Users.Add(existingUser);
+
+        await context.SaveChangesAsync();
+
+        var dto = new RegisterDto
+        {
+            Username = "dervis",
+            Email = "dervis@test.com",
+            Password = "654321"
+        };
+
+        // Act
+        Func<Task> act = () => service.Register(dto);
+
+        // Assert
+        await act
+            .Should()
+            .ThrowAsync<ConflictException>()
+            .WithMessage("Username already exists.");
     }
     [Fact]
     public async Task Login_Should_Return_Token_When_Valid_Credentials()

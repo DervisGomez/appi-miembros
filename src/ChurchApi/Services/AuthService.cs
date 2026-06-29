@@ -1,12 +1,12 @@
 using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
+using ChurchApi.Exceptions;
 using ChurchApi.Helpers;
 using ChurchApi.Interfaces;
 using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
-using ChurchApi.Exceptions;
 
 namespace ChurchApi.Services;
 
@@ -32,8 +32,27 @@ public class AuthService : IAuthService
 
         var user = CreateUser(registerDto);
 
-        await _context.Users.AddAsync(user);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.Users.AddAsync(user);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (PersistenceExceptionTranslator.IsUniqueConstraintViolation(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "Unique constraint violation while registering a user.");
+
+            throw await BuildUserConflictException(registerDto);
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while registering a user.");
+
+            throw;
+        }
 
         _logger.LogInformation("User registered with id {UserId}", user.Id);
 
@@ -67,7 +86,19 @@ public class AuthService : IAuthService
         }
 
         user.Role = UserRole.Admin;
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+        {
+            _logger.LogError(
+                exception,
+                "Unexpected persistence error while promoting user {UserId} to admin.",
+                userId);
+
+            throw;
+        }
 
         _logger.LogInformation("User promoted to admin with id {UserId}", user.Id);
 
@@ -76,13 +107,36 @@ public class AuthService : IAuthService
 
     private async Task EnsureUserDoesNotExist(string username, string email)
     {
-        var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Username == username || u.Email == email);
-
-        if (existingUser is not null)
+        if (await _context.Users.AnyAsync(u => u.Username == username))
         {
-            throw new ConflictException("User already exists");
+            throw new ConflictException("Username already exists.");
         }
+
+        if (await _context.Users.AnyAsync(u => u.Email == email))
+        {
+            throw new ConflictException("Email already exists.");
+        }
+    }
+
+    private async Task<ConflictException> BuildUserConflictException(RegisterDto registerDto)
+    {
+        var conflictMessage = await GetUserConflictMessage(registerDto);
+        return new ConflictException(conflictMessage);
+    }
+
+    private async Task<string> GetUserConflictMessage(RegisterDto registerDto)
+    {
+        if (await _context.Users.AsNoTracking().AnyAsync(u => u.Username == registerDto.Username))
+        {
+            return "Username already exists.";
+        }
+
+        if (await _context.Users.AsNoTracking().AnyAsync(u => u.Email == registerDto.Email))
+        {
+            return "Email already exists.";
+        }
+
+        return "User already exists.";
     }
 
     private static User CreateUser(RegisterDto registerDto)
