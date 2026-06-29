@@ -40,11 +40,6 @@ public static class SwaggerExtensions
 
     public static IApplicationBuilder UseApplicationSwagger(this WebApplication app)
     {
-        if (!app.Environment.IsDevelopment())
-        {
-            return app;
-        }
-
         app.UseSwagger();
         app.UseSwaggerUI();
 

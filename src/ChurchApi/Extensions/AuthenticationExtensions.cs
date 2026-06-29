@@ -12,12 +12,11 @@ public static class AuthenticationExtensions
         IConfiguration configuration,
         IHostEnvironment environment)
     {
-        services.Configure<JwtOptions>(
-            configuration.GetSection(JwtOptions.SectionName));
+        var jwtSection = configuration.GetSection(JwtOptions.SectionName);
 
-        var jwtOptions = configuration
-            .GetSection(JwtOptions.SectionName)
-            .Get<JwtOptions>();
+        services.Configure<JwtOptions>(jwtSection);
+
+        var jwtOptions = jwtSection.Get<JwtOptions>();
 
         if (jwtOptions is null
             || string.IsNullOrWhiteSpace(jwtOptions.Secret)

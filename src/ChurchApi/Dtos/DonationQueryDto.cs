@@ -1,10 +1,9 @@
+using ChurchApi.Enums;
+
 namespace ChurchApi.Dtos;
 
-using ChurchApi.Enums;
 public class DonationQueryDto
 {
-    // public DateTime? StartDate { get; set; }
-    // public DateTime? EndDate { get; set; }
     public decimal? MinAmount { get; set; }
     public decimal? MaxAmount { get; set; }
     public int? MemberId { get; set; }

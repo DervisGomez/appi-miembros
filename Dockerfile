@@ -8,11 +8,9 @@ USER $APP_UID
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ["ChurchApi.sln", "./"]
 COPY ["src/ChurchApi/ChurchApi.csproj", "src/ChurchApi/"]
-COPY ["tests/ChurchApi.Tests/ChurchApi.Tests.csproj", "tests/ChurchApi.Tests/"]
-RUN dotnet restore "ChurchApi.sln"
-COPY . .
+RUN dotnet restore "src/ChurchApi/ChurchApi.csproj"
+COPY ["src/ChurchApi/", "src/ChurchApi/"]
 RUN dotnet publish "src/ChurchApi/ChurchApi.csproj" \
     --configuration Release \
     --output /app/publish \

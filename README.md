@@ -2,53 +2,123 @@
 
 [![.NET CI](https://github.com/DervisGomez/appi-miembros/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DervisGomez/appi-miembros/actions/workflows/dotnet.yml)
 
-REST API built with ASP.NET Core 8 for managing church members and their donations. Designed as a portfolio project that demonstrates production-oriented backend practices: JWT authentication, role-based authorization, structured logging, global error handling, containerization, and automated testing.
+API REST desarrollada con **ASP.NET Core 8** para la gestión de miembros de una iglesia y sus donaciones. El proyecto demuestra prácticas de backend orientadas a producción: autenticación JWT, autorización por roles, logging estructurado, manejo global de errores, contenedorización, pruebas automatizadas y despliegue en Azure.
 
-> This is a portfolio and learning project. It is not intended for production use without additional hardening.
+> Proyecto de portafolio y aprendizaje. No está pensado para producción sin endurecimiento adicional.
 
-## Features
+## 🚀 Acceso rápido
 
-- ASP.NET Core 8 Web API
-- Entity Framework Core 8 with SQL Server
-- JWT authentication and role-based authorization (`Admin`, `User`)
-- Password hashing with ASP.NET Core Identity `PasswordHasher`
-- User registration, login, and admin promotion
-- Member management (CRUD)
-- Donation management with member association
-- Pagination, filtering, and sorting on list endpoints
-- DTO pattern with manual mapper classes
-- Input validation with Data Annotations
-- Global exception handling middleware returning RFC 7807 `ProblemDetails`
-- Dependency injection with scoped services
-- Structured logging with Serilog (console sink and request logging)
-- Health checks with database connectivity probe
-- Swagger / OpenAPI (Development environment only)
-- Docker and Docker Compose support
-- GitHub Actions CI pipeline
-- Unit tests and integration tests (46 tests)
-
-## Technologies
-
-| Technology | Purpose |
+| Recurso | Enlace |
 |---|---|
-| ASP.NET Core 8 | Web API framework |
-| Entity Framework Core 8 | ORM and migrations |
-| SQL Server | Primary database |
-| SQLite | In-memory database for integration tests |
-| JWT (`System.IdentityModel.Tokens.Jwt`) | Token generation and validation |
-| Swashbuckle (Swagger) | API documentation |
-| ASP.NET Core Identity (`PasswordHasher`) | Password hashing |
-| Serilog | Structured logging |
-| xUnit | Test framework |
-| Moq | Dependency mocking |
-| FluentAssertions | Readable test assertions |
-| EF Core InMemory | In-memory database for unit tests |
-| Docker / Docker Compose | Containerized local deployment |
-| GitHub Actions | Continuous integration |
+| 📖 Swagger UI | [Abrir documentación interactiva](https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/swagger) |
+| 💚 Health Check | [Ver estado de la API](https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/health) |
 
-## Architecture
+## 🌐 Demo
 
-The solution follows a conventional `src` / `tests` layout with a layered structure inside a single API project:
+La API está desplegada y disponible públicamente en Azure Container Apps:
+
+| Recurso | URL |
+|---|---|
+| Swagger UI | https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/swagger |
+| Health Check | https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/health |
+
+## ☁️ Despliegue en Azure
+
+La aplicación está desplegada en producción utilizando:
+
+- **Azure Container Apps** — hosting serverless de contenedores con ingress HTTPS
+- **Azure Container Registry** — almacenamiento y distribución de imágenes Docker
+- **Azure SQL Database** — base de datos relacional gestionada
+- **Docker** — empaquetado multi-stage de la aplicación
+- **Entity Framework Core Migrations** — versionado y aplicación del esquema de base de datos
+
+```text
+Código fuente → Docker → Azure Container Registry → Azure Container Apps → Azure SQL Database
+```
+
+## 📸 Capturas de pantalla
+
+### Swagger UI
+
+![Swagger](docs/images/swagger.png)
+
+Documentación OpenAPI interactiva con autenticación JWT.
+
+### Health Check
+
+![Health Check](docs/images/health.png)
+
+Endpoint de monitoreo que valida el estado de la API y la conectividad con Azure SQL Database.
+
+---
+
+## Características
+
+- Registro, login y promoción de usuarios con roles (`Admin`, `User`)
+- CRUD de miembros con paginación y ordenamiento
+- Gestión de donaciones asociadas a miembros con filtros y paginación
+- Autenticación JWT con HMAC-SHA256
+- Autorización basada en roles
+- Hash de contraseñas con `PasswordHasher` de ASP.NET Core Identity
+- Validación de entrada con Data Annotations
+- Manejo global de excepciones con `ProblemDetails` (RFC 7807)
+- Logging estructurado con Serilog
+- Health checks de conectividad a base de datos
+- Swagger / OpenAPI
+- Docker y Docker Compose
+- Pipeline CI con GitHub Actions
+- 46 pruebas unitarias e de integración
+
+## Tecnologías
+
+- ASP.NET Core 8
+- Entity Framework Core 8
+- SQL Server
+- SQLite (tests de integración)
+- Docker
+- Azure Container Apps
+- Azure SQL Database
+- Azure Container Registry
+- JWT Authentication
+- Serilog
+- Health Checks
+- Swagger (Swashbuckle)
+- xUnit, Moq, FluentAssertions
+- GitHub Actions
+
+## Arquitectura
+
+El proyecto sigue una **arquitectura en capas dentro de un único proyecto API**, sin sobreingeniería:
+
+```text
+HTTP Request
+     │
+     ▼
+Controllers        ← Contratos HTTP, autorización, validación de modelo
+     │
+     ▼
+Services           ← Lógica de negocio, reglas, orquestación
+     │
+     ▼
+AppDbContext       ← Persistencia con EF Core
+     │
+     ▼
+SQL Server
+```
+
+**Patrones aplicados:**
+
+| Patrón | Implementación |
+|---|---|
+| DTO | Desacopla contrato HTTP de entidades de dominio |
+| Service Layer | Encapsula lógica de negocio |
+| Manual Mappers | Traducción explícita entidad ↔ DTO |
+| Options Pattern | `JwtOptions` para configuración tipada |
+| Extension Methods | `Program.cs` mínimo, configuración modular |
+| Middleware | `ExceptionMiddleware` para errores consistentes |
+| Dependency Injection | Servicios registrados como `Scoped` |
+
+## Estructura del proyecto
 
 ```text
 .
@@ -56,95 +126,81 @@ The solution follows a conventional `src` / `tests` layout with a layered struct
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .editorconfig
-├── .github/
-│   └── workflows/
-│       └── dotnet.yml
-├── src/
-│   └── ChurchApi/
-│       ├── Controllers/       HTTP endpoints (Auth, Members, Donations)
-│       ├── Data/              EF Core DbContext
-│       ├── Dtos/              Request, response, and query models
-│       ├── Enums/             Shared enumerations (UserRole, SortOrder)
-│       ├── Exceptions/        Domain-specific exceptions
-│       ├── Extensions/        Service registration and pipeline configuration
-│       ├── HealthChecks/      Database health check implementation
-│       ├── Helpers/           Utility classes (password hashing)
-│       ├── Interfaces/        Service contracts (IJwtTokenService)
-│       ├── Mappers/           Manual entity-to-DTO mapping
-│       ├── Middleware/        Global exception handling
-│       ├── Migrations/        EF Core database migrations
-│       ├── Models/            Domain entities
-│       ├── Options/           Strongly typed configuration (JwtOptions)
-│       ├── Services/          Business logic and service interfaces
-│       └── Program.cs         Application entry point
-└── tests/
-    └── ChurchApi.Tests/
-        ├── Fixtures/          Test fixtures (DonationServiceFixture)
-        ├── Helpers/           In-memory DbContext factory
-        ├── Integration/       HTTP integration tests
-        │   ├── Auth/
-        │   ├── Donations/
-        │   ├── Health/
-        │   ├── Members/
-        │   ├── Helpers/
-        │   └── Infrastructure/
-        └── Unit/              Service layer unit tests
-            ├── Helpers/
-            └── Services/
+├── .github/workflows/dotnet.yml
+├── src/ChurchApi/
+│   ├── Controllers/       Endpoints HTTP (Auth, Members, Donations)
+│   ├── Data/              DbContext y configuración EF Core
+│   ├── Dtos/              Modelos de request, response y query
+│   ├── Enums/             UserRole, SortOrder
+│   ├── Exceptions/        Excepciones de dominio (NotFound, Conflict, etc.)
+│   ├── Extensions/        Registro de servicios y pipeline HTTP
+│   ├── HealthChecks/      Verificación de conectividad SQL Server
+│   ├── Helpers/           Password hashing, paginación
+│   ├── Interfaces/        Contratos de servicios (IJwtTokenService)
+│   ├── Mappers/           Mapeo manual entidad → DTO
+│   ├── Middleware/        Manejo global de excepciones
+│   ├── Migrations/        Migraciones EF Core
+│   ├── Models/            Entidades de dominio
+│   ├── Options/           Clases de configuración tipada
+│   ├── Services/          Lógica de negocio e interfaces
+│   └── Program.cs         Punto de entrada
+└── tests/ChurchApi.Tests/
+    ├── Fixtures/          Fixtures reutilizables
+    ├── Helpers/           Factory de DbContext para unit tests
+    ├── Integration/       Tests HTTP end-to-end
+    └── Unit/              Tests de capa de servicios
 ```
 
-**Controllers** handle HTTP concerns and delegate to services. **Services** contain business logic and interact with `AppDbContext`. **Dtos** decouple the API contract from domain models. **Mappers** translate between entities and DTOs. **Middleware** catches unhandled exceptions and returns structured error responses.
-
-## Requirements
+## Requisitos
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- SQL Server instance (local development) **or** Docker with Docker Compose
+- SQL Server (local o Docker)
+- [Docker](https://www.docker.com/) y Docker Compose (opcional)
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (opcional, para despliegue en Azure)
 
-## Local Setup
+## Configuración
 
-### Clone and build
+### Variables de entorno
+
+ASP.NET Core mapea dobles guiones bajos (`__`) a secciones anidadas de configuración.
+
+| Variable | Descripción | Requerida |
+|---|---|---|
+| `ConnectionStrings__SqlServer` | Cadena de conexión SQL Server | Sí |
+| `Jwt__Secret` | Clave de firma JWT (mín. 32 caracteres) | Sí |
+| `Jwt__Issuer` | Emisor del token | Sí |
+| `Jwt__Audience` | Audiencia del token | Sí |
+| `Jwt__ExpirationMinutes` | Duración del token en minutos | Sí |
+| `Database__ApplyMigrations` | Aplicar migraciones al iniciar (`true`/`false`) | No |
+| `ASPNETCORE_ENVIRONMENT` | Entorno de ejecución | No |
+| `ASPNETCORE_URLS` | URLs de escucha del servidor | No |
+
+### Desarrollo local con user-secrets
+
+```bash
+dotnet user-secrets set "ConnectionStrings:SqlServer" \
+  "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;" \
+  --project src/ChurchApi
+
+dotnet user-secrets set "Jwt:Secret" \
+  "ReplaceWithALongLocalDevelopmentSecretAtLeast32Chars" \
+  --project src/ChurchApi
+```
+
+`appsettings.json` no contiene secretos reales por diseño.
+
+## Ejecución local
 
 ```bash
 git clone git@github.com:DervisGomez/appi-miembros.git
 cd appi-miembros
 dotnet restore
 dotnet build
-```
-
-### Configuration
-
-Do not commit real connection strings or JWT secrets. Store local development secrets with the .NET user-secrets store:
-
-```bash
-dotnet user-secrets set "ConnectionStrings:SqlServer" "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;" --project src/ChurchApi
-dotnet user-secrets set "Jwt:Secret" "ReplaceWithALongLocalDevelopmentSecretAtLeast32Chars" --project src/ChurchApi
-```
-
-`src/ChurchApi/appsettings.json` intentionally contains no secret values:
-
-```json
-"ConnectionStrings": {
-  "SqlServer": ""
-}
-```
-
-### Database
-
-Apply EF Core migrations before running the application:
-
-```bash
 dotnet ef database update --project src/ChurchApi
-```
-
-### Run
-
-```bash
 dotnet run --project src/ChurchApi
 ```
 
-Default URLs (see `launchSettings.json`):
-
-| Profile | URL |
+| Perfil | URL |
 |---|---|
 | HTTP | http://localhost:5101 |
 | HTTPS | https://localhost:7231 |
@@ -152,185 +208,263 @@ Default URLs (see `launchSettings.json`):
 
 ## Docker
 
-Run the API and SQL Server together without installing SQL Server locally:
+### Construir y ejecutar
 
 ```bash
 docker compose up --build
 ```
 
-The API will be available at:
+| Servicio | Puerto | Descripción |
+|---|---|---|
+| `churchapi` | 8080 | API ASP.NET Core |
+| `sqlserver` | — (red interna) | SQL Server 2022 |
 
-```text
-http://localhost:8080/swagger
-```
+Swagger en Docker: http://localhost:8080/swagger
 
-Docker Compose starts:
-
-- **sqlserver**: SQL Server 2022 with persistent storage and health check.
-- **churchapi**: ASP.NET Core API published in Release mode with health check.
-
-The API container applies EF Core migrations automatically via `Database__ApplyMigrations=true`.
-
-Useful commands:
+### Comandos útiles
 
 ```bash
 docker compose ps
-docker compose logs
 docker compose logs churchapi
 docker compose down
-docker compose down -v   # also removes the SQL Server data volume
+docker compose down -v    # elimina también el volumen de datos
 ```
 
-## Environment Variables
+El contenedor de la API aplica migraciones automáticamente con `Database__ApplyMigrations=true`.
 
-ASP.NET Core maps double underscores to nested configuration sections.
+## Entity Framework
 
-| Variable | Description | Required |
-|---|---|---|
-| `ConnectionStrings__SqlServer` | SQL Server connection string | Yes |
-| `Jwt__Secret` | JWT signing key (minimum 32 characters) | Yes |
-| `Jwt__Issuer` | JWT issuer claim | Yes |
-| `Jwt__Audience` | JWT audience claim | Yes |
-| `Jwt__ExpirationMinutes` | Token lifetime in minutes | Yes |
-| `Database__ApplyMigrations` | Apply EF migrations on startup (`true` / `false`) | No |
-| `ASPNETCORE_ENVIRONMENT` | Runtime environment (`Development`, `Production`, etc.) | No |
-| `ASPNETCORE_URLS` | URLs the server listens on | No |
-
-Example for deployed environments:
+### Crear una migración
 
 ```bash
-ConnectionStrings__SqlServer="Server=...;Database=ChurchDB;..."
-Jwt__Secret="ReplaceWithAProductionSecretAtLeast32Chars"
-Jwt__Issuer="ChurchApi"
-Jwt__Audience="ChurchApi.Clients"
-Jwt__ExpirationMinutes="60"
+dotnet ef migrations add NombreMigracion --project src/ChurchApi
 ```
 
-## GitHub Actions
+### Aplicar migraciones
 
-The CI pipeline (`.github/workflows/dotnet.yml`) runs on every push and pull request to `main`:
+```bash
+dotnet ef database update --project src/ChurchApi
+```
 
-1. Checkout repository
-2. Setup .NET 8 SDK
-3. Cache NuGet packages
-4. `dotnet restore`
-5. `dotnet build --configuration Release`
-6. `dotnet test --configuration Release`
+### Modelo de datos
 
-## Logging
+- **Users**: credenciales y roles
+- **Members**: datos personales con email único
+- **Donations**: montos asociados a miembros con restricción FK
 
-Logging is configured with **Serilog** via `appsettings.json` and `LoggingExtensions`:
+Índices en campos de búsqueda frecuente (email, fecha, monto). `DeleteBehavior.Restrict` en donaciones para evitar borrados en cascada.
 
-- Console sink with structured output template
-- Request logging middleware with elapsed time per request
-- Health check endpoints logged at `Debug` level to reduce noise
-- Errors logged at `Error` level through both request logging and `ExceptionMiddleware`
+## ☁️ Azure — Guía de despliegue
 
-Log enrichment includes application name and environment.
+El proyecto está desplegado en Azure y también puede replicarse siguiendo este flujo:
 
-## Health Checks
+```text
+Código fuente
+     │
+     ▼
+Dockerfile (multi-stage build)
+     │
+     ▼
+Azure Container Registry (ACR)
+     │
+     ▼
+Azure Container Apps
+     │
+     ▼
+Azure SQL Database
+```
 
-A database connectivity health check is exposed at:
+### Pasos de despliegue
+
+**1. Crear Azure SQL Database**
+
+```bash
+az sql server create --name churchapi-sql --resource-group churchapi-rg \
+  --location eastus --admin-user sqladmin --admin-password '<password>'
+
+az sql db create --resource-group churchapi-rg --server churchapi-sql \
+  --name ChurchDB --service-objective S0
+```
+
+**2. Construir y subir imagen a ACR**
+
+```bash
+az acr create --resource-group churchapi-rg --name churchapiregistry --sku Basic
+
+az acr build --registry churchapiregistry \
+  --image churchapi:latest .
+```
+
+**3. Crear Container App**
+
+```bash
+az containerapp create \
+  --name churchapi \
+  --resource-group churchapi-rg \
+  --environment churchapi-env \
+  --image churchapiregistry.azurecr.io/churchapi:latest \
+  --target-port 8080 \
+  --ingress external \
+  --env-vars \
+    ConnectionStrings__SqlServer="Server=tcp:churchapi-sql.database.windows.net,1433;Database=ChurchDB;..." \
+    Jwt__Secret="secret-from-key-vault" \
+    Jwt__Issuer="ChurchApi" \
+    Jwt__Audience="ChurchApi.Clients" \
+    Jwt__ExpirationMinutes="60" \
+    Database__ApplyMigrations="true" \
+    ASPNETCORE_ENVIRONMENT="Production"
+```
+
+**4. Configurar secretos**
+
+En producción, almacenar `Jwt__Secret` y la cadena de conexión en **Azure Key Vault** o como secretos de Container Apps, nunca en el repositorio.
+
+### Consideraciones Azure
+
+| Aspecto | Configuración |
+|---|---|
+| Puerto | `8080` (configurado en Dockerfile y `ASPNETCORE_URLS`) |
+| Health probe | `GET /health` — compatible con liveness/readiness de Container Apps |
+| Base de datos | `ConnectionStrings__SqlServer` apunta a Azure SQL |
+| Migraciones | `Database__ApplyMigrations=true` en primer despliegue; luego migrar con pipeline CI/CD |
+| HTTPS | Gestionado por Container Apps ingress |
+
+## Endpoints principales
+
+### Auth
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | — | Registrar usuario |
+| `POST` | `/api/auth/login` | — | Obtener JWT |
+| `PATCH` | `/api/auth/{userId}/promote` | Admin | Promover a Admin |
+
+### Members
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/api/members` | Usuario | Listar (paginado) |
+| `GET` | `/api/members/{id}` | Usuario | Obtener por ID |
+| `POST` | `/api/members` | Usuario | Crear miembro |
+| `PUT` | `/api/members/{id}` | Admin | Actualizar miembro |
+| `DELETE` | `/api/members/{id}` | Admin | Eliminar miembro |
+| `GET` | `/api/members/{memberId}/donations` | Usuario | Donaciones del miembro |
+| `POST` | `/api/members/{memberId}/donations` | Usuario | Crear donación |
+
+### Donations
+
+| Método | Endpoint | Auth | Descripción |
+|---|---|---|---|
+| `GET` | `/api/donations` | Usuario | Listar (paginado, filtros) |
+| `DELETE` | `/api/donations/{id}` | Admin | Eliminar donación |
+
+## Health Check
 
 ```text
 GET /health
 ```
 
-Returns JSON with overall status, duration, and per-check details. Returns `200` when healthy and `503` when degraded or unhealthy.
+| Entorno | URL |
+|---|---|
+| **Azure (producción)** | https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/health |
+| Local | http://localhost:5101/health |
+| Docker | http://localhost:8080/health |
+
+Respuesta JSON con estado general, duración y detalle por check:
+
+```json
+{
+  "status": "Healthy",
+  "totalDuration": "00:00:00.0123456",
+  "checks": [
+    {
+      "name": "sqlserver",
+      "status": "Healthy",
+      "duration": "00:00:00.0100000",
+      "description": "Database connection is available."
+    }
+  ]
+}
+```
+
+- `200 OK` → sistema saludable
+- `503 Service Unavailable` → degradado o no saludable
+
+## Swagger
+
+Disponible al ejecutar la aplicación:
+
+| Entorno | URL |
+|---|---|
+| **Azure (producción)** | https://churchapi.purplemushroom-77a470e6.canadacentral.azurecontainerapps.io/swagger |
+| Local | http://localhost:5101/swagger |
+| Docker | http://localhost:8080/swagger |
+
+Incluye esquema de seguridad Bearer para probar endpoints autenticados.
+
+## Seguridad
+
+- **JWT** con validación de issuer, audience, lifetime y firma HMAC-SHA256
+- `ClockSkew = Zero` para evitar tokens expirados con margen
+- `RequireHttpsMetadata` habilitado fuera de Development
+- Contraseñas hasheadas con `PasswordHasher` (nunca en texto plano)
+- Roles `Admin` y `User` con `[Authorize(Roles = "Admin")]`
+- Secretos externos al repositorio (user-secrets / variables de entorno / Key Vault)
+
+## Logging
+
+**Serilog** configurado en `appsettings.json`:
+
+- Sink de consola con plantilla estructurada
+- Request logging con tiempo de respuesta por petición
+- Endpoints `/health` logueados en nivel `Debug`
+- Enriquecimiento con nombre de aplicación y entorno
+- Errores capturados en `ExceptionMiddleware` y request logging
 
 ## Testing
-
-Run all tests from the solution root:
 
 ```bash
 dotnet test
 ```
 
-### Test suite (46 tests)
+| Suite | Tests | Alcance |
+|---|---|---|
+| Unit — AuthService | 6 | Registro, login, conflictos |
+| Unit — MemberService | 7 | CRUD, paginación, constraints |
+| Unit — DonationService | 19 | Filtros, paginación, validación |
+| Integration — Auth | 4 | Endpoints HTTP, ProblemDetails |
+| Integration — Members | 6 | CRUD, autorización |
+| Integration — Donations | 3 | Listado, creación, eliminación |
+| Integration — Health | 1 | Endpoint `/health` |
+| **Total** | **46** | |
 
-| Area | Scope |
-|---|---|
-| `AuthServiceTests` | Registration, login, conflict and unauthorized scenarios |
-| `MemberServiceTests` | Pagination, sorting, CRUD, constraint violations |
-| `DonationServiceTests` | Pagination, filtering, sorting, CRUD, validation |
-| `AuthControllerTests` | Register, login, ProblemDetails responses |
-| `MemberControllerTests` | CRUD endpoints, authorization, conflict handling |
-| `DonationControllerTests` | List, create, delete endpoints |
-| `HealthCheckTests` | `/health` endpoint availability |
-
-### Test infrastructure
-
-- **Unit tests**: EF Core InMemory provider via `TestDbContextFactory`, Moq for `IJwtTokenService`, `TimeProvider` for deterministic dates.
-- **Integration tests**: `WebApplicationFactory` with SQLite in-memory database, seeded admin user, full HTTP pipeline.
-
-## API Endpoints
-
-All routes are relative to the application base URL.
-
-### Auth
-
-| Method | Endpoint | Authorization | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/register` | None | Register a new user |
-| `POST` | `/api/auth/login` | None | Authenticate and receive a JWT |
-| `PATCH` | `/api/auth/{userId}/promote` | `Admin` | Promote a user to the `Admin` role |
-
-### Members
-
-| Method | Endpoint | Authorization | Description |
-|---|---|---|---|
-| `GET` | `/api/members` | Authenticated | List members (paginated, sortable) |
-| `GET` | `/api/members/{id}` | Authenticated | Get a member by ID |
-| `POST` | `/api/members` | Authenticated | Create a member |
-| `PUT` | `/api/members/{id}` | `Admin` | Update a member |
-| `DELETE` | `/api/members/{id}` | `Admin` | Delete a member |
-| `GET` | `/api/members/{memberId}/donations` | Authenticated | List donations for a member |
-| `POST` | `/api/members/{memberId}/donations` | Authenticated | Add a donation to a member |
-
-**Query parameters for `GET /api/members`:**
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `Page` | `int` | `1` | Page number |
-| `PageSize` | `int` | `10` | Items per page (max `100`) |
-| `SortOrder` | `Asc` \| `Desc` | `Asc` | Sort by name and last name |
-
-### Donations
-
-| Method | Endpoint | Authorization | Description |
-|---|---|---|---|
-| `GET` | `/api/donations` | Authenticated | List donations (paginated, filterable, sortable) |
-| `DELETE` | `/api/donations/{id}` | `Admin` | Delete a donation |
-
-**Query parameters for `GET /api/donations`:**
-
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `MemberId` | `int?` | — | Filter by member ID |
-| `MinAmount` | `decimal?` | — | Minimum donation amount |
-| `MaxAmount` | `decimal?` | — | Maximum donation amount |
-| `Page` | `int` | `1` | Page number |
-| `PageSize` | `int` | `10` | Items per page (max `100`) |
-| `SortOrder` | `Asc` \| `Desc` | `Desc` | Sort by donation date |
-
-### Authorization roles
-
-| Role | Access |
-|---|---|
-| `User` | Read members and donations, create members and donations |
-| `Admin` | All `User` permissions, plus update/delete members, delete donations, and promote users |
-
-## Roadmap
-
-Planned improvements for future versions (not yet implemented):
+## Próximas mejoras
 
 - Refresh tokens
-- Rate limiting on authentication endpoints
-- API versioning
-- OpenTelemetry / distributed tracing
-- Clean Architecture layering
-- Test coverage reporting in CI
+- Rate limiting en endpoints de autenticación
+- Versionado de API (`/api/v1/...`)
+- OpenTelemetry y métricas
+- Reporte de cobertura en CI
+- Pipeline CD hacia Azure Container Apps
+- FluentValidation para reglas de negocio complejas
 
-## License
+## 📸 Más capturas (opcional)
+
+Capturas adicionales que puedes agregar al portafolio:
+
+| Imagen | Descripción | Ruta sugerida |
+|---|---|---|
+| Arquitectura Azure | Diagrama del despliegue | `docs/images/azure-architecture.png` |
+| GitHub Actions | Pipeline CI en verde | `docs/images/ci-pipeline.png` |
+| Docker Compose | Servicios corriendo | `docs/images/docker-compose.png` |
+
+```markdown
+<!-- Ejemplo para insertar en portafolio -->
+![Swagger UI](docs/images/swagger.png)
+![Health Check](docs/images/health.png)
+![Azure Architecture](docs/images/azure-architecture.png)
+```
+
+## Licencia
 
 MIT

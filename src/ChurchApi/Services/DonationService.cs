@@ -2,6 +2,7 @@ using ChurchApi.Data;
 using ChurchApi.Dtos;
 using ChurchApi.Enums;
 using ChurchApi.Exceptions;
+using ChurchApi.Helpers;
 using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,6 @@ namespace ChurchApi.Services;
 
 public class DonationService : IDonationService
 {
-    private const int DefaultPage = 1;
-    private const int DefaultPageSize = 10;
-    private const int MaxPageSize = 100;
-
     private readonly AppDbContext _context;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DonationService> _logger;
@@ -34,12 +31,12 @@ public class DonationService : IDonationService
 
         var query = BuildDonationQuery(queryDto);
         var totalItems = await query.CountAsync();
-        var (page, pageSize) = NormalizePaging(queryDto.Page, queryDto.PageSize);
+        var (page, pageSize) = PaginationHelper.NormalizePaging(queryDto.Page, queryDto.PageSize);
 
-        var donations = await ApplyPaging(query, page, pageSize).ToListAsync();
+        var donations = await PaginationHelper.ApplyPaging(query, page, pageSize).ToListAsync();
         var items = donations.Select(DonationMapper.ToResponseDto).ToList();
 
-        return BuildPagedResponse(items, page, pageSize, totalItems);
+        return PaginationHelper.BuildPagedResponse(items, page, pageSize, totalItems);
     }
 
     public async Task<List<Donation>> GetDonationsByMemberId(int memberId)
@@ -161,47 +158,6 @@ public class DonationService : IDonationService
         return sortOrder == SortOrder.Asc
             ? query.OrderBy(d => d.Date)
             : query.OrderByDescending(d => d.Date);
-    }
-
-    private static IQueryable<Donation> ApplyPaging(
-        IQueryable<Donation> query,
-        int page,
-        int pageSize)
-    {
-        return query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize);
-    }
-
-    private static (int Page, int PageSize) NormalizePaging(int requestedPage, int requestedPageSize)
-    {
-        var page = requestedPage < 1 ? DefaultPage : requestedPage;
-        var pageSize = requestedPageSize < 1 ? DefaultPageSize : requestedPageSize;
-
-        return (page, Math.Min(pageSize, MaxPageSize));
-    }
-
-    private static PagedResponse<DonationMemberResponseDto> BuildPagedResponse(
-        List<DonationMemberResponseDto> items,
-        int page,
-        int pageSize,
-        int totalItems)
-    {
-        return new PagedResponse<DonationMemberResponseDto>
-        {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = totalItems,
-            TotalPages = CalculateTotalPages(totalItems, pageSize)
-        };
-    }
-
-    private static int CalculateTotalPages(int totalItems, int pageSize)
-    {
-        return totalItems == 0
-            ? 0
-            : (int)Math.Ceiling((double)totalItems / pageSize);
     }
 
     private async Task EnsureMemberExists(int memberId)
