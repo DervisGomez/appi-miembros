@@ -19,6 +19,7 @@ public class DonationsController : ControllerBase
 
     [Authorize]
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResponse<DonationMemberResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDonations([FromQuery] DonationQueryDto queryDto)
     {
         var pagedResponse = await _donationService.GetDonations(queryDto);
@@ -28,13 +29,10 @@ public class DonationsController : ControllerBase
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteDonation(int id)
     {
-        var deletedDonation = await _donationService.DeleteDonation(id);
-        if (deletedDonation == null)
-        {
-            return NotFound();
-        }
-        return Ok(deletedDonation);
+        await _donationService.DeleteDonation(id);
+        return NoContent();
     }
 }   

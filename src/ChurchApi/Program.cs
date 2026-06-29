@@ -1,24 +1,38 @@
 using ChurchApi.Interfaces;
-using ChurchApi.Models;
 using ChurchApi.Services;
 using ChurchApi.Data;
-using ChurchApi.Extensions;
+using ChurchApi.Options;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ChurchApi.Middleware;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var sqlServerConnectionString = builder.Configuration.GetConnectionString("SqlServer");
+if (string.IsNullOrWhiteSpace(sqlServerConnectionString))
+{
+    throw new InvalidOperationException(
+        "SQL Server connection string is not configured. Set ConnectionStrings:SqlServer with user-secrets or an environment variable.");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     // options.UseSqlite("Data Source=church.db");
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"));
+    options.UseSqlServer(sqlServerConnectionString);
 });
 
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<IDonationService, DonationService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddSingleton(TimeProvider.System);
+
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection(JwtOptions.SectionName));
 
 
 // Add services to the container.
@@ -53,17 +67,41 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddControllers();
 
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
-    ?? builder.Configuration["Jwt:Secret"];
+var jwtOptions = builder.Configuration
+    .GetSection(JwtOptions.SectionName)
+    .Get<JwtOptions>();
 
-if (string.IsNullOrWhiteSpace(jwtSecret))
+if (jwtOptions is null
+    || string.IsNullOrWhiteSpace(jwtOptions.Secret)
+    || string.IsNullOrWhiteSpace(jwtOptions.Issuer)
+    || string.IsNullOrWhiteSpace(jwtOptions.Audience)
+    || jwtOptions.ExpirationMinutes <= 0)
 {
     throw new InvalidOperationException(
-        "JWT secret is not configured. Set Jwt:Secret in appsettings or the JWT_SECRET environment variable.");
+        "JWT options are not configured. Set Jwt:Secret, Jwt:Issuer, Jwt:Audience, and Jwt:ExpirationMinutes.");
 }
 
+var jwtSigningKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(jwtOptions.Secret));
 
-builder.Services.AddJwtAuthentication(jwtSecret);
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.SaveToken = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = jwtSigningKey,
+            ValidateLifetime = true,
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 builder.Services.AddAuthorization();
 
 var app = builder.Build();

@@ -4,6 +4,7 @@ using ChurchApi.Dtos;
 using ChurchApi.Tests.Integration.Helpers;
 using ChurchApi.Tests.Integration.Infrastructure;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ChurchApi.Tests.Integration.Auth;
 
@@ -30,13 +31,44 @@ public class AuthControllerTests : IntegrationTestBase, IClassFixture<CustomWebA
         });
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        response.Headers.Location.Should().NotBeNull();
 
         var user = await response.Content.ReadFromJsonAsync<UserResponseDto>();
         user.Should().NotBeNull();
         user!.Username.Should().Be(username);
         user.Email.Should().Be(email);
         user.Id.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Register_Should_Return_ProblemDetails_When_User_Already_Exists()
+    {
+        // Arrange
+        var username = $"user_{Guid.NewGuid():N}";
+        var email = $"{username}@test.com";
+
+        await IntegrationAuthHelper.RegisterAsync(Client, username, email, "12345678");
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/register", new RegisterDto
+        {
+            Username = username,
+            Email = email,
+            Password = "12345678"
+        });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var problemDetails = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problemDetails.Should().NotBeNull();
+        problemDetails!.Type.Should().Be("https://httpstatuses.com/409");
+        problemDetails.Title.Should().Be("Conflict");
+        problemDetails.Status.Should().Be((int)HttpStatusCode.Conflict);
+        problemDetails.Detail.Should().Be("User already exists");
+        problemDetails.Instance.Should().Be("/api/auth/register");
     }
 
     [Fact]

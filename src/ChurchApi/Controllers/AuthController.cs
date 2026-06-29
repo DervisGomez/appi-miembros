@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using System.Security.Claims;
-using ChurchApi.Enums;
 namespace ChurchApi.Controllers;
 
 using ChurchApi.Services;
@@ -18,13 +16,15 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> Register(RegisterDto registerDto)
     {
         var user = await _authService.Register(registerDto);
-        return Ok(user);
+        return Created($"/api/auth/users/{user.Id}", user);
     }
 
     [HttpPost("login")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login(LoginDto loginDto)
     {
         var authResponse = await _authService.Login(loginDto);
@@ -33,15 +33,10 @@ public class AuthController : ControllerBase
     
     [Authorize(Roles = "Admin")]
     [HttpPatch("{userId}/promote")]
+    [ProducesResponseType(typeof(UserResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> PromoteToAdmin(int userId)
     {
         var user = await _authService.PromoteToAdmin(userId);
-
-        if (user == null)
-        {
-            return NotFound();
-        }
-
         return Ok(user);
     }
-    }   
+}

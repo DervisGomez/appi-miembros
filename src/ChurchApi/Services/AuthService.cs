@@ -3,6 +3,7 @@ using ChurchApi.Dtos;
 using ChurchApi.Enums;
 using ChurchApi.Helpers;
 using ChurchApi.Interfaces;
+using ChurchApi.Mappers;
 using ChurchApi.Models;
 using Microsoft.EntityFrameworkCore;
 using ChurchApi.Exceptions;
@@ -22,46 +23,29 @@ public class AuthService : IAuthService
 
     public async Task<UserResponseDto> Register(RegisterDto registerDto)
     {
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == registerDto.Username || u.Email == registerDto.Email);
-        if (existingUser is not null)
-        {
-            throw new ConflictException("User already exists");
-        }
+        await EnsureUserDoesNotExist(registerDto.Username, registerDto.Email);
 
-        var user = new User
-        {
-            Username = registerDto.Username,
-            Email = registerDto.Email,
-            PasswordHash = AuthPasswordHasher.Hash(registerDto.Password),
-            Role = UserRole.User,
-        };
+        var user = CreateUser(registerDto);
 
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
 
-        return new UserResponseDto
-        {
-            Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
-            Role = user.Role,
-        };
+        return UserMapper.ToDto(user);
     }
 
     public async Task<AuthResponseDto> Login(LoginDto loginDto)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginDto.Username || u.Email == loginDto.Username);
-        if (user is null || !AuthPasswordHasher.Verify(loginDto.Password, user.PasswordHash))
-        {
-            throw new UnauthorizedException("Invalid username or password");
-        }
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Username == loginDto.Username || u.Email == loginDto.Username);
+        var authenticatedUser = ValidateCredentials(user, loginDto.Password);
+
         return new AuthResponseDto
         {
-            Token = _jwtTokenService.GenerateToken(user.Id, user.Role),
+            Token = _jwtTokenService.GenerateToken(authenticatedUser.Id, authenticatedUser.Role),
         };
     }
 
-    public async Task<UserResponseDto?> PromoteToAdmin(int userId)
+    public async Task<UserResponseDto> PromoteToAdmin(int userId)
     {
         var user = await _context.Users.FindAsync(userId);
 
@@ -73,12 +57,38 @@ public class AuthService : IAuthService
         user.Role = UserRole.Admin;
         await _context.SaveChangesAsync();
 
-        return new UserResponseDto
+        return UserMapper.ToDto(user);
+    }
+
+    private async Task EnsureUserDoesNotExist(string username, string email)
+    {
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.Username == username || u.Email == email);
+
+        if (existingUser is not null)
         {
-            Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
-            Role = user.Role,
+            throw new ConflictException("User already exists");
+        }
+    }
+
+    private static User CreateUser(RegisterDto registerDto)
+    {
+        return new User
+        {
+            Username = registerDto.Username,
+            Email = registerDto.Email,
+            PasswordHash = AuthPasswordHasher.Hash(registerDto.Password),
+            Role = UserRole.User,
         };
+    }
+
+    private static User ValidateCredentials(User? user, string password)
+    {
+        if (user is null || !AuthPasswordHasher.Verify(password, user.PasswordHash))
+        {
+            throw new UnauthorizedException("Invalid username or password");
+        }
+
+        return user;
     }
 }

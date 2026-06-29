@@ -5,6 +5,7 @@ using ChurchApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using ChurchApi.Models;
 using ChurchApi.Dtos;
+using ChurchApi.Exceptions;
 using ChurchApi.Mappers;
 
 [ApiController]
@@ -21,6 +22,7 @@ public class MembersController : ControllerBase
     
     [Authorize]
     [HttpGet]
+    [ProducesResponseType(typeof(PagedResponse<MemberResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMembers([FromQuery] MemberQueryDto queryDto)
     {
         var pagedResponse = await _memberService.GetMembers(queryDto);
@@ -29,19 +31,16 @@ public class MembersController : ControllerBase
 
     [Authorize]
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(MemberResponseDto), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMember(int id)
     {
         var member = await _memberService.GetMember(id);
-        if (member == null)
-        {
-            return NotFound();
-        }
-
         return Ok(MemberMapper.ToDto(member));
     }
 
     [Authorize]
     [HttpPost]
+    [ProducesResponseType(typeof(MemberResponseDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> AddMember(CreateMemberDto dto)
     {
         var member = MemberMapper.ToModel(dto);
@@ -51,35 +50,32 @@ public class MembersController : ControllerBase
 
 
     [Authorize(Roles = "Admin")]
-    [HttpPut]
-    public async Task<IActionResult> UpdateMember(UpdateMemberDto dto)
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(MemberResponseDto), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateMember(int id, UpdateMemberDto dto)
     {
-                
-        var updatedMember = await _memberService.UpdateMember(MemberMapper.ToModel(dto));
-        if (updatedMember == null)
+        if (id != dto.Id)
         {
-            return NotFound();
+            throw new ValidationException("Route id must match request body id.");
         }
+
+        var updatedMember = await _memberService.UpdateMember(MemberMapper.ToModel(dto));
         return Ok(MemberMapper.ToDto(updatedMember));
     }
 
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteMember(int id)
     {
-        var deletedMember = await _memberService.DeleteMember(id);
-
-        if (deletedMember == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(MemberMapper.ToDto(deletedMember));
+        await _memberService.DeleteMember(id);
+        return NoContent();
     }
 
     [Authorize]
     [HttpGet("{memberId}/donations")]
+    [ProducesResponseType(typeof(List<DonationResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetDonationsByMemberId(int memberId)
     {
         var donations = await _donationService.GetDonationsByMemberId(memberId);
@@ -89,13 +85,10 @@ public class MembersController : ControllerBase
 
     [Authorize]
     [HttpPost("{memberId}/donations")]
+    [ProducesResponseType(typeof(DonationResponseDto), StatusCodes.Status201Created)]
     public async Task<IActionResult> AddDonation(CreateDonationDto dto, int memberId)
     {
         var donation = await _donationService.AddDonation(dto, memberId);
-        if (donation == null)
-        {
-            return NotFound();
-        }
         return CreatedAtAction(nameof(GetDonationsByMemberId), new { memberId = donation.MemberId }, DonationMapper.ToDto(donation));
     }
 }

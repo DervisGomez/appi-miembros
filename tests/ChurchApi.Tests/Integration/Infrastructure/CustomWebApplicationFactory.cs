@@ -12,13 +12,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        Environment.SetEnvironmentVariable("JWT_SECRET", JwtSecret);
+        Environment.SetEnvironmentVariable("Jwt__Secret", JwtSecret);
+        Environment.SetEnvironmentVariable(
+            "ConnectionStrings__SqlServer",
+            "Server=(local);Database=ChurchApiTests;Trusted_Connection=True;TrustServerCertificate=True;");
+
         builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["ConnectionStrings:SqlServer"] = "Server=(local);Database=ChurchApiTests;Trusted_Connection=True;TrustServerCertificate=True;",
                 ["Jwt:Secret"] = JwtSecret
             });
         });

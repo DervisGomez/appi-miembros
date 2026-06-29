@@ -73,4 +73,79 @@ public class MemberControllerTests : IntegrationTestBase, IClassFixture<CustomWe
         persistedMember!.Id.Should().Be(createdMember.Id);
         persistedMember.Email.Should().Be(request.Email);
     }
+
+    [Fact]
+    public async Task UpdateMember_Should_Return_200_When_User_Is_Admin()
+    {
+        // Arrange
+        IntegrationAuthHelper.ClearAuthorization(Client);
+        var token = await IntegrationAuthHelper.LoginAsAdminAsync(Client);
+        IntegrationAuthHelper.SetBearerToken(Client, token);
+
+        var createResponse = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Maria",
+            LastName = "Perez",
+            Email = $"maria.perez.{Guid.NewGuid():N}@test.com",
+            Phone = "5551112222",
+            Age = 34
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createdMember = await createResponse.Content.ReadFromJsonAsync<MemberResponseDto>();
+        createdMember.Should().NotBeNull();
+
+        var request = new UpdateMemberDto
+        {
+            Id = createdMember!.Id,
+            Name = "Maria Elena",
+            LastName = "Perez",
+            Email = createdMember.Email,
+            Phone = "5553334444",
+            Age = 35
+        };
+
+        // Act
+        var response = await Client.PutAsJsonAsync($"/api/members/{createdMember.Id}", request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedMember = await response.Content.ReadFromJsonAsync<MemberResponseDto>();
+        updatedMember.Should().NotBeNull();
+        updatedMember!.Id.Should().Be(createdMember.Id);
+        updatedMember.Name.Should().Be("Maria Elena");
+        updatedMember.Phone.Should().Be("5553334444");
+        updatedMember.Age.Should().Be(35);
+    }
+
+    [Fact]
+    public async Task DeleteMember_Should_Return_NoContent_When_User_Is_Admin()
+    {
+        // Arrange
+        IntegrationAuthHelper.ClearAuthorization(Client);
+        var token = await IntegrationAuthHelper.LoginAsAdminAsync(Client);
+        IntegrationAuthHelper.SetBearerToken(Client, token);
+
+        var createResponse = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Carlos",
+            LastName = "Santos",
+            Email = $"carlos.santos.{Guid.NewGuid():N}@test.com",
+            Phone = "5552223333",
+            Age = 42
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createdMember = await createResponse.Content.ReadFromJsonAsync<MemberResponseDto>();
+        createdMember.Should().NotBeNull();
+
+        // Act
+        var response = await Client.DeleteAsync($"/api/members/{createdMember!.Id}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var content = await response.Content.ReadAsByteArrayAsync();
+        content.Should().BeEmpty();
+    }
 }

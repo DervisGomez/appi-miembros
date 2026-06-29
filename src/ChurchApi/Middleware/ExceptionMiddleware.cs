@@ -1,6 +1,6 @@
 using System.Net;
-using System.Text.Json;
 using ChurchApi.Exceptions;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ChurchApi.Middleware;
 
@@ -31,41 +31,59 @@ public class ExceptionMiddleware
     private static Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         HttpStatusCode statusCode;
-        string message;
+        string title;
+        string detail;
+        string type;
 
         switch (exception)
         {
             case ConflictException conflict:
                 statusCode = HttpStatusCode.Conflict;
-                message = conflict.Message;
+                title = "Conflict";
+                detail = conflict.Message;
+                type = "https://httpstatuses.com/409";
                 break;
             case NotFoundException notFound:
                 statusCode = HttpStatusCode.NotFound;
-                message = notFound.Message;
+                title = "Resource not found";
+                detail = notFound.Message;
+                type = "https://httpstatuses.com/404";
                 break;
             case UnauthorizedException unauthorized:
                 statusCode = HttpStatusCode.Unauthorized;
-                message = unauthorized.Message;
+                title = "Unauthorized";
+                detail = unauthorized.Message;
+                type = "https://httpstatuses.com/401";
                 break;
             case ValidationException validation:
                 statusCode = HttpStatusCode.BadRequest;
-                message = validation.Message;
+                title = "Validation error";
+                detail = validation.Message;
+                type = "https://httpstatuses.com/400";
                 break;
             default:
                 statusCode = HttpStatusCode.InternalServerError;
-                message = "An unexpected error occurred.";
+                title = "Internal server error";
+                detail = "An unexpected error occurred.";
+                type = "https://httpstatuses.com/500";
                 break;
         }
 
         context.Response.StatusCode = (int)statusCode;
-        context.Response.ContentType = "application/json";
+        context.Response.ContentType = "application/problem+json";
 
-        var response = new
+        var problemDetails = new ProblemDetails
         {
-            statusCode = (int)statusCode,
-            message
+            Type = type,
+            Title = title,
+            Status = (int)statusCode,
+            Detail = detail,
+            Instance = context.Request.Path
         };
 
-        return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        return context.Response.WriteAsJsonAsync(
+            problemDetails,
+            options: null,
+            contentType: "application/problem+json");
     }
 }

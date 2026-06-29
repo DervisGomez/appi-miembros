@@ -3,39 +3,57 @@ using System.Security.Claims;
 using System.Text;
 using ChurchApi.Enums;
 using ChurchApi.Interfaces;
+using ChurchApi.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace ChurchApi.Services;
 
 public class JwtTokenService : IJwtTokenService
 {
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions _jwtOptions;
+    private readonly TimeProvider _timeProvider;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(IOptions<JwtOptions> jwtOptions, TimeProvider timeProvider)
     {
-        _configuration = configuration;
+        _jwtOptions = jwtOptions.Value;
+        _timeProvider = timeProvider;
     }
 
     public string GenerateToken(int userId, UserRole role)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
-        var secret = Environment.GetEnvironmentVariable("JWT_SECRET")
-            ?? _configuration["Jwt:Secret"];
+        var token = tokenHandler.CreateToken(BuildTokenDescriptor(userId, role));
 
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            throw new InvalidOperationException(
-                "JWT secret is not configured. Set Jwt:Secret in appsettings or the JWT_SECRET environment variable.");
-        }
-
-        var key = Encoding.UTF8.GetBytes(secret);
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new Claim[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim(ClaimTypes.Role, role.ToString()) }),
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-        };
-        var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+
+    private SecurityTokenDescriptor BuildTokenDescriptor(int userId, UserRole role)
+    {
+        return new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(BuildClaims(userId, role)),
+            Issuer = _jwtOptions.Issuer,
+            Audience = _jwtOptions.Audience,
+            Expires = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(_jwtOptions.ExpirationMinutes),
+            SigningCredentials = BuildSigningCredentials(),
+        };
+    }
+
+    private static Claim[] BuildClaims(int userId, UserRole role)
+    {
+        return
+        [
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Role, role.ToString())
+        ];
+    }
+
+    private SigningCredentials BuildSigningCredentials()
+    {
+        var key = Encoding.UTF8.GetBytes(_jwtOptions.Secret);
+        return new SigningCredentials(
+            new SymmetricSecurityKey(key),
+            SecurityAlgorithms.HmacSha256Signature);
     }
 }

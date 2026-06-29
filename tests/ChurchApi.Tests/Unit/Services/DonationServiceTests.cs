@@ -338,6 +338,22 @@ public class DonationServiceTests
     }
 
     [Fact]
+    public async Task GetDonationsByMemberId_Should_Throw_NotFoundException_When_Member_Does_Not_Exist()
+    {
+        // Arrange
+        using var fixture = new DonationServiceFixture();
+
+        // Act
+        Func<Task> act = () => fixture.Service.GetDonationsByMemberId(999);
+
+        // Assert
+        await act
+            .Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Member with id 999 was not found.");
+    }
+
+    [Fact]
     public async Task AddDonation_Should_Create_Donation_When_Member_Exists()
     {
         // Arrange
@@ -355,17 +371,17 @@ public class DonationServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.Amount.Should().Be(250m);
+        result.Amount.Should().Be(250m);
         result.Description.Should().Be("Monthly offering");
         result.MemberId.Should().Be(member.Id);
-        result.Date.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
+        result.Date.Should().Be(fixture.TimeProvider.GetUtcNow().UtcDateTime);
 
         var donationInDb = fixture.Context.Donations.Single();
         donationInDb.Should().BeEquivalentTo(result, options => options.ExcludingMissingMembers());
     }
 
     [Fact]
-    public async Task AddDonation_Should_Return_Null_When_Member_Does_Not_Exist()
+    public async Task AddDonation_Should_Throw_NotFoundException_When_Member_Does_Not_Exist()
     {
         // Arrange
         using var fixture = new DonationServiceFixture();
@@ -377,10 +393,14 @@ public class DonationServiceTests
         };
 
         // Act
-        var result = await fixture.Service.AddDonation(dto, memberId: 999);
+        Func<Task> act = () => fixture.Service.AddDonation(dto, memberId: 999);
 
         // Assert
-        result.Should().BeNull();
+        await act
+            .Should()
+            .ThrowAsync<NotFoundException>()
+            .WithMessage("Member with id 999 was not found.");
+
         fixture.Context.Donations.Should().BeEmpty();
     }
 
@@ -397,7 +417,7 @@ public class DonationServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        result!.Id.Should().Be(donation.Id);
+        result.Id.Should().Be(donation.Id);
         result.Amount.Should().Be(75m);
         fixture.Context.Donations.Should().BeEmpty();
     }

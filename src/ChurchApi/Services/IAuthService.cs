@@ -6,5 +6,5 @@ public interface IAuthService
     Task<UserResponseDto> Register(RegisterDto registerDto);
     Task<AuthResponseDto> Login(LoginDto loginDto);
 
-    Task<UserResponseDto?> PromoteToAdmin(int userId);
+    Task<UserResponseDto> PromoteToAdmin(int userId);
 }

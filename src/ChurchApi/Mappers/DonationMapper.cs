@@ -13,7 +13,6 @@ public static class DonationMapper
             Amount = donation.Amount,
             Date = donation.Date,
             Description = donation.Description,
-            // MemberId = donation.MemberId
         };
     }
 
@@ -35,9 +34,6 @@ public static class DonationMapper
                 Id = donation.Member.Id,
                 Name = donation.Member.Name,
                 LastName = donation.Member.LastName,
-                // Email = donation.Member.Email,
-                // Phone = donation.Member.Phone,
-                // Age = donation.Member.Age
             }
         };
     }

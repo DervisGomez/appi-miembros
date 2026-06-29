@@ -10,118 +10,176 @@ using Microsoft.EntityFrameworkCore;
 
 public class DonationService : IDonationService
 {
-    private readonly AppDbContext _context;
+    private const int DefaultPage = 1;
+    private const int DefaultPageSize = 10;
+    private const int MaxPageSize = 100;
 
-    public DonationService(AppDbContext context)
+    private readonly AppDbContext _context;
+    private readonly TimeProvider _timeProvider;
+
+    public DonationService(AppDbContext context, TimeProvider timeProvider)
     {
         _context = context;
+        _timeProvider = timeProvider;
     }
 
     public async Task<PagedResponse<DonationMemberResponseDto>> GetDonations(DonationQueryDto queryDto)
     {
-        var query = _context.Donations.Include(d => d.Member).AsQueryable();
-        if (queryDto.MemberId != null)
-        {
-            query = query.Where(d => d.MemberId == queryDto.MemberId);
-        }
-        if (queryDto.MinAmount != null)
-        {
-            query = query.Where(d => d.Amount >= queryDto.MinAmount);
-        }
-        if (queryDto.MaxAmount != null)
-        {
-            query = query.Where(d => d.Amount <= queryDto.MaxAmount);
-        }
+        ValidateDonationQuery(queryDto);
 
+        var query = BuildDonationQuery(queryDto);
+        var totalItems = await query.CountAsync();
+        var (page, pageSize) = NormalizePaging(queryDto.Page, queryDto.PageSize);
+
+        var donations = await ApplyPaging(query, page, pageSize).ToListAsync();
+        var items = donations.Select(DonationMapper.ToResponseDto).ToList();
+
+        return BuildPagedResponse(items, page, pageSize, totalItems);
+    }
+
+    public async Task<List<Donation>> GetDonationsByMemberId(int memberId)
+    {
+        await EnsureMemberExists(memberId);
+
+        return await _context.Donations.Where(d => d.MemberId == memberId).Include(d => d.Member).ToListAsync();
+    }
+
+    public async Task<Donation> AddDonation(CreateDonationDto dto, int memberId)
+    {
+        await EnsureMemberExists(memberId);
+
+        var donation = CreateDonation(dto, memberId);
+        await _context.Donations.AddAsync(donation);
+        await _context.SaveChangesAsync();
+        return donation;   
+    }
+    public async Task<Donation> DeleteDonation(int id)
+    {
+        var donation = await GetDonationOrThrow(id);
+
+        _context.Donations.Remove(donation);
+        await _context.SaveChangesAsync();
+        return donation;
+    }
+
+    private static void ValidateDonationQuery(DonationQueryDto queryDto)
+    {
         if (queryDto.MinAmount is not null
             && queryDto.MaxAmount is not null
             && queryDto.MinAmount > queryDto.MaxAmount)
         {
             throw new ValidationException("MinAmount cannot be greater than MaxAmount.");
         }
+    }
 
-        if (queryDto.SortOrder == SortOrder.Asc)
+    private IQueryable<Donation> BuildDonationQuery(DonationQueryDto queryDto)
+    {
+        var query = _context.Donations
+            .Include(d => d.Member)
+            .AsQueryable();
+
+        query = ApplyFilters(query, queryDto);
+        return ApplySorting(query, queryDto.SortOrder);
+    }
+
+    private static IQueryable<Donation> ApplyFilters(
+        IQueryable<Donation> query,
+        DonationQueryDto queryDto)
+    {
+        if (queryDto.MemberId is not null)
         {
-            query = query.OrderBy(d => d.Date);
+            query = query.Where(d => d.MemberId == queryDto.MemberId);
         }
-        else
+
+        if (queryDto.MinAmount is not null)
         {
-            query = query.OrderByDescending(d => d.Date);
+            query = query.Where(d => d.Amount >= queryDto.MinAmount);
         }
-        var totalItems = await query.CountAsync();
-        var page = queryDto.Page < 1
-            ? 1
-            : queryDto.Page;
 
-        var pageSize = queryDto.PageSize < 1
-            ? 10
-            : queryDto.PageSize;
-
-        pageSize = Math.Min(pageSize, 100);
-        // query = query.Skip((page - 1) * pageSize).Take(pageSize);
-
-        
-        var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-
-        var items = await query
-        // .OrderByDescending(d => d.Date)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .Select(d => new DonationMemberResponseDto
+        if (queryDto.MaxAmount is not null)
         {
-            Id = d.Id,
-            Amount = d.Amount,
-            Date = d.Date,
-            Description = d.Description,
+            query = query.Where(d => d.Amount <= queryDto.MaxAmount);
+        }
 
-            Member = new MemberDonationResponseDto
-            {
-                Id = d.Member.Id,
-                Name = d.Member.Name,
-                LastName = d.Member.LastName
-            }
-        })
-        .ToListAsync();
+        return query;
+    }
 
-        
-        // var items = await query.ToListAsync();
-        var response = new PagedResponse<DonationMemberResponseDto>
+    private static IQueryable<Donation> ApplySorting(
+        IQueryable<Donation> query,
+        SortOrder sortOrder)
+    {
+        return sortOrder == SortOrder.Asc
+            ? query.OrderBy(d => d.Date)
+            : query.OrderByDescending(d => d.Date);
+    }
+
+    private static IQueryable<Donation> ApplyPaging(
+        IQueryable<Donation> query,
+        int page,
+        int pageSize)
+    {
+        return query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize);
+    }
+
+    private static (int Page, int PageSize) NormalizePaging(int requestedPage, int requestedPageSize)
+    {
+        var page = requestedPage < 1 ? DefaultPage : requestedPage;
+        var pageSize = requestedPageSize < 1 ? DefaultPageSize : requestedPageSize;
+
+        return (page, Math.Min(pageSize, MaxPageSize));
+    }
+
+    private static PagedResponse<DonationMemberResponseDto> BuildPagedResponse(
+        List<DonationMemberResponseDto> items,
+        int page,
+        int pageSize,
+        int totalItems)
+    {
+        return new PagedResponse<DonationMemberResponseDto>
         {
             Items = items,
             Page = page,
             PageSize = pageSize,
             TotalItems = totalItems,
-            TotalPages = totalPages
+            TotalPages = CalculateTotalPages(totalItems, pageSize)
         };
-        return response;
     }
 
-    public async Task<List<Donation>> GetDonationsByMemberId(int memberId)
+    private static int CalculateTotalPages(int totalItems, int pageSize)
     {
-        return await _context.Donations.Where(d => d.MemberId == memberId).Include(d => d.Member).ToListAsync();
+        return totalItems == 0
+            ? 0
+            : (int)Math.Ceiling((double)totalItems / pageSize);
     }
 
-    public async Task<Donation?> AddDonation(CreateDonationDto dto, int memberId)
+    private async Task EnsureMemberExists(int memberId)
     {
-        var member = await _context.Members.FirstOrDefaultAsync(m => m.Id == memberId);
-        if (member == null)
+        var memberExists = await _context.Members.AnyAsync(m => m.Id == memberId);
+        if (!memberExists)
         {
-            return null;
+            throw new NotFoundException($"Member with id {memberId} was not found.");
         }
-        var donation = new Donation { Amount = dto.Amount, Description = dto.Description, MemberId = memberId, Date = DateTime.Now };
-        await _context.Donations.AddAsync(donation);
-        await _context.SaveChangesAsync();
-        return donation;   
     }
-    public async Task<Donation?> DeleteDonation(int id)
+
+    private async Task<Donation> GetDonationOrThrow(int id)
     {
         var donation = await _context.Donations.FirstOrDefaultAsync(d => d.Id == id);
         if (donation is null)
         {
             throw new NotFoundException($"Donation with id {id} was not found.");
         }
-        _context.Donations.Remove(donation);
-        await _context.SaveChangesAsync();
+
+        return donation;
+    }
+
+    private Donation CreateDonation(CreateDonationDto dto, int memberId)
+    {
+        var donation = DonationMapper.ToModel(dto);
+        donation.MemberId = memberId;
+        donation.Date = _timeProvider.GetUtcNow().UtcDateTime;
+
         return donation;
     }
 }

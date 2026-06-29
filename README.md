@@ -8,7 +8,7 @@ This is a learning and portfolio project. It is not intended for production use.
 
 - ASP.NET Core 8 Web API
 - Entity Framework Core with SQL Server
-- JWT authentication via a custom `AuthenticationHandler`
+- JWT authentication via ASP.NET Core `AddJwtBearer`
 - Role-based authorization (`Admin`, `User`)
 - Password hashing with ASP.NET Core Identity `PasswordHasher`
 - User registration and login
@@ -92,18 +92,31 @@ dotnet build
 
 ### Configuration
 
-Update the SQL Server connection string in `src/ChurchApi/appsettings.json`:
+Do not commit real connection strings or JWT secrets. Store local development secrets with
+the .NET user-secrets store:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:SqlServer" "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;" --project src/ChurchApi
+dotnet user-secrets set "Jwt:Secret" "ReplaceWithALongLocalDevelopmentSecretAtLeast32Chars" --project src/ChurchApi
+```
+
+`src/ChurchApi/appsettings.json` intentionally contains no secret values:
 
 ```json
 "ConnectionStrings": {
-  "SqlServer": "Server=localhost,1433;Database=ChurchDB;User Id=sa;Password=YourPassword;TrustServerCertificate=True;"
+  "SqlServer": ""
 }
 ```
 
-Configure the JWT secret using one of the following options:
+For deployed environments, configure secrets through environment variables or your hosting
+provider's secret manager. ASP.NET Core maps double underscores to configuration sections:
 
-- Set the `JWT_SECRET` environment variable, or
-- Add `Jwt:Secret` to `appsettings.Development.json` (a development value is already provided)
+```bash
+Jwt__Secret="ReplaceWithAProductionSecretAtLeast32Chars"
+Jwt__Issuer="ChurchApi"
+Jwt__Audience="ChurchApi.Clients"
+Jwt__ExpirationMinutes="60"
+```
 
 ### Database
 

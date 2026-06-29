@@ -84,4 +84,44 @@ public class DonationControllerTests : IntegrationTestBase, IClassFixture<Custom
         donations![0].Id.Should().Be(createdDonation.Id);
         donations[0].Amount.Should().Be(150m);
     }
+
+    [Fact]
+    public async Task DeleteDonation_Should_Return_NoContent_When_User_Is_Admin()
+    {
+        // Arrange
+        IntegrationAuthHelper.ClearAuthorization(Client);
+        var token = await IntegrationAuthHelper.LoginAsAdminAsync(Client);
+        IntegrationAuthHelper.SetBearerToken(Client, token);
+
+        var memberResponse = await Client.PostAsJsonAsync("/api/members", new CreateMemberDto
+        {
+            Name = "Luis",
+            LastName = "Garcia",
+            Email = $"luis.garcia.{Guid.NewGuid():N}@test.com",
+            Phone = "5554445555",
+            Age = 31
+        });
+        memberResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var member = await memberResponse.Content.ReadFromJsonAsync<MemberResponseDto>();
+        member.Should().NotBeNull();
+
+        var donationResponse = await Client.PostAsJsonAsync($"/api/members/{member!.Id}/donations", new CreateDonationDto
+        {
+            Amount = 75m,
+            Description = "Special offering"
+        });
+        donationResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var donation = await donationResponse.Content.ReadFromJsonAsync<DonationResponseDto>();
+        donation.Should().NotBeNull();
+
+        // Act
+        var response = await Client.DeleteAsync($"/api/donations/{donation!.Id}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var content = await response.Content.ReadAsByteArrayAsync();
+        content.Should().BeEmpty();
+    }
 }

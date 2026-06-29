@@ -9,9 +9,9 @@ public interface IMemberService
 
     Task AddMember(Member member);
 
-    Task<Member?> GetMember(int id);
+    Task<Member> GetMember(int id);
 
-    Task<Member?> UpdateMember(Member member);
+    Task<Member> UpdateMember(Member member);
 
-    Task<Member?> DeleteMember(int id);
+    Task<Member> DeleteMember(int id);
 }
