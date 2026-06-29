@@ -1,5 +1,7 @@
 # Church API
 
+[![.NET CI](https://github.com/DervisGomez/appi-miembreos/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DervisGomez/appi-miembreos/actions/workflows/dotnet.yml)
+
 A REST API built with ASP.NET Core 8 for managing church members and their donations. The project demonstrates common backend patterns including JWT authentication, role-based authorization, Entity Framework Core data access, and unit testing with mocked dependencies.
 
 This is a learning and portfolio project. It is not intended for production use.
