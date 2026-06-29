@@ -1,6 +1,7 @@
 using ChurchApi.Data;
 using ChurchApi.Services;
 using ChurchApi.Tests.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 
 namespace ChurchApi.Tests.Fixtures;
@@ -17,7 +18,10 @@ public sealed class DonationServiceFixture : IDisposable
     {
         Context = TestDbContextFactory.Create();
         TimeProvider = new FakeTimeProvider(FixedUtcNow);
-        Service = new DonationService(Context, TimeProvider);
+        Service = new DonationService(
+            Context,
+            TimeProvider,
+            NullLogger<DonationService>.Instance);
     }
 
     public void Dispose() => Context.Dispose();

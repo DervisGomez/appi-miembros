@@ -14,11 +14,16 @@ public class AuthService : IAuthService
 {
     private readonly AppDbContext _context;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly ILogger<AuthService> _logger;
 
-    public AuthService(AppDbContext context, IJwtTokenService jwtTokenService)
+    public AuthService(
+        AppDbContext context,
+        IJwtTokenService jwtTokenService,
+        ILogger<AuthService> logger)
     {
         _context = context;
         _jwtTokenService = jwtTokenService;
+        _logger = logger;
     }
 
     public async Task<UserResponseDto> Register(RegisterDto registerDto)
@@ -30,6 +35,8 @@ public class AuthService : IAuthService
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("User registered with id {UserId}", user.Id);
+
         return UserMapper.ToDto(user);
     }
 
@@ -38,6 +45,11 @@ public class AuthService : IAuthService
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Username == loginDto.Username || u.Email == loginDto.Username);
         var authenticatedUser = ValidateCredentials(user, loginDto.Password);
+
+        _logger.LogInformation(
+            "User authenticated with id {UserId} and role {Role}",
+            authenticatedUser.Id,
+            authenticatedUser.Role);
 
         return new AuthResponseDto
         {
@@ -56,6 +68,8 @@ public class AuthService : IAuthService
 
         user.Role = UserRole.Admin;
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("User promoted to admin with id {UserId}", user.Id);
 
         return UserMapper.ToDto(user);
     }

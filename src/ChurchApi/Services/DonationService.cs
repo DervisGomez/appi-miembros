@@ -16,11 +16,16 @@ public class DonationService : IDonationService
 
     private readonly AppDbContext _context;
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<DonationService> _logger;
 
-    public DonationService(AppDbContext context, TimeProvider timeProvider)
+    public DonationService(
+        AppDbContext context,
+        TimeProvider timeProvider,
+        ILogger<DonationService> logger)
     {
         _context = context;
         _timeProvider = timeProvider;
+        _logger = logger;
     }
 
     public async Task<PagedResponse<DonationMemberResponseDto>> GetDonations(DonationQueryDto queryDto)
@@ -51,6 +56,12 @@ public class DonationService : IDonationService
         var donation = CreateDonation(dto, memberId);
         await _context.Donations.AddAsync(donation);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Donation created with id {DonationId} for member {MemberId}",
+            donation.Id,
+            memberId);
+
         return donation;   
     }
     public async Task<Donation> DeleteDonation(int id)
@@ -59,6 +70,9 @@ public class DonationService : IDonationService
 
         _context.Donations.Remove(donation);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Donation deleted with id {DonationId}", donation.Id);
+
         return donation;
     }
 

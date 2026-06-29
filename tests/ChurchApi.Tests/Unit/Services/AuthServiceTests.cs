@@ -8,6 +8,7 @@ using Moq;
 using ChurchApi.Models;
 using ChurchApi.Helpers;
 using ChurchApi.Exceptions;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ChurchApi.Tests.Unit.Services;
 
@@ -19,7 +20,10 @@ public class AuthServiceTests
         // Arrange
         var context = TestDbContextFactory.Create();
         var jwtTokenServiceMock = new Mock<IJwtTokenService>();
-        var service = new AuthService(context, jwtTokenServiceMock.Object);
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
 
         var dto = new RegisterDto
         {
@@ -49,7 +53,10 @@ public class AuthServiceTests
 
         var jwtTokenServiceMock = new Mock<IJwtTokenService>();
 
-        var service = new AuthService(context, jwtTokenServiceMock.Object);
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
 
         var existingUser = new User
         {
@@ -103,7 +110,10 @@ public class AuthServiceTests
             It.IsAny<UserRole>()))
             .Returns("fake-jwt-token");
 
-        var service = new AuthService(context, jwtTokenServiceMock.Object);
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
 
         var dto = new LoginDto
         {
@@ -126,7 +136,10 @@ public class AuthServiceTests
         // Arrange
         var context = TestDbContextFactory.Create();
         var jwtTokenServiceMock = new Mock<IJwtTokenService>();
-        var service = new AuthService(context, jwtTokenServiceMock.Object);
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
 
         var dto = new LoginDto
         {
@@ -166,7 +179,10 @@ public class AuthServiceTests
         await context.SaveChangesAsync();
 
         var jwtTokenServiceMock = new Mock<IJwtTokenService>();
-        var service = new AuthService(context, jwtTokenServiceMock.Object);
+        var service = new AuthService(
+            context,
+            jwtTokenServiceMock.Object,
+            NullLogger<AuthService>.Instance);
 
         var dto = new LoginDto
         {

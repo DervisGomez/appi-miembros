@@ -7,9 +7,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ChurchApi.Middleware;
+using Serilog;
+using Serilog.Events;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, services, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName);
+});
 
 var sqlServerConnectionString = builder.Configuration.GetConnectionString("SqlServer");
 if (string.IsNullOrWhiteSpace(sqlServerConnectionString))
@@ -115,6 +126,19 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseSerilogRequestLogging(options =>
+{
+    options.GetLevel = (httpContext, elapsed, exception) =>
+        exception is null && httpContext.Response.StatusCode < StatusCodes.Status500InternalServerError
+            ? LogEventLevel.Information
+            : LogEventLevel.Error;
+
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("Endpoint", httpContext.GetEndpoint()?.DisplayName);
+    };
+});
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
