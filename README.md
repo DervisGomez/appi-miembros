@@ -136,6 +136,52 @@ dotnet run --project src/ChurchApi
 
 By default, the application starts on `http://localhost:5101` and `https://localhost:7231` (see `launchSettings.json`).
 
+## Docker
+
+You can run the API and SQL Server together without installing SQL Server locally:
+
+```bash
+docker compose up --build
+```
+
+The API will be available at:
+
+```text
+http://localhost:8080/swagger
+```
+
+Docker Compose starts:
+
+- `sqlserver`: SQL Server 2022 with persistent storage.
+- `churchapi`: ASP.NET Core API published in Release mode.
+
+SQL Server is available only inside the Docker network; the API connects to it using
+the `sqlserver` service name.
+
+The API container uses environment variables instead of user-secrets:
+
+- `ConnectionStrings__SqlServer`
+- `Jwt__Secret`
+- `Jwt__Issuer`
+- `Jwt__Audience`
+- `Jwt__ExpirationMinutes`
+
+Useful Docker commands:
+
+```bash
+docker compose ps
+docker compose logs
+docker compose logs churchapi
+docker compose logs sqlserver
+docker compose down
+```
+
+To remove the SQL Server data volume as well:
+
+```bash
+docker compose down -v
+```
+
 ## Running Tests
 
 Execute all unit tests from the solution root:
