@@ -4,9 +4,10 @@ using ChurchApi.Exceptions;
 using ChurchApi.Models;
 using ChurchApi.Services;
 using ChurchApi.Tests.Helpers;
+using ChurchApi.Tests.Unit.Helpers;
 using FluentAssertions;
 
-namespace ChurchApi.Tests.Services;
+namespace ChurchApi.Tests.Unit.Services;
 
 public class MemberServiceTests
 {

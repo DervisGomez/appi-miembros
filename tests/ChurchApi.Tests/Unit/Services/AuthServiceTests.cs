@@ -9,7 +9,7 @@ using ChurchApi.Models;
 using ChurchApi.Helpers;
 using ChurchApi.Exceptions;
 
-namespace ChurchApi.Tests.Services;
+namespace ChurchApi.Tests.Unit.Services;
 
 public class AuthServiceTests
 {

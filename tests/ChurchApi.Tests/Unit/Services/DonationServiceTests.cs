@@ -2,10 +2,10 @@ using ChurchApi.Dtos;
 using ChurchApi.Enums;
 using ChurchApi.Exceptions;
 using ChurchApi.Tests.Fixtures;
-using ChurchApi.Tests.Helpers;
+using ChurchApi.Tests.Unit.Helpers;
 using FluentAssertions;
 
-namespace ChurchApi.Tests.Services;
+namespace ChurchApi.Tests.Unit.Services;
 
 public class DonationServiceTests
 {

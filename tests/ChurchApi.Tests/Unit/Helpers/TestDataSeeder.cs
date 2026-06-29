@@ -1,7 +1,7 @@
 using ChurchApi.Data;
 using ChurchApi.Models;
 
-namespace ChurchApi.Tests.Helpers;
+namespace ChurchApi.Tests.Unit.Helpers;
 
 public static class TestDataSeeder
 {
